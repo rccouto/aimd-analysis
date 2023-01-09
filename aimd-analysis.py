@@ -239,8 +239,14 @@ def main():
         #traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
         #traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
         #traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
-        #traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology) 
-        #traj = traj1 + traj2 + traj3 + traj4
+        #traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+        # traj5 = mdtraj.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+        #traj6 = mdtraj.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+        #traj7 = mdtraj.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+        #traj8 = mdtraj.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+        #traj=mdtraj.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+        #del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -253,9 +259,10 @@ def main():
                 teta = gp.compute_pyramidalization(traj.xyz[i,chrome,:],22,23,24,21)
                 teta_pyra.append(teta)
 
-            plt.plot(teta_pyra)
+            t=np.linspace(0, len(teta_pyra)-1, len(teta_pyra))
+            plt.plot(t, teta_pyra)
             plt.ylabel('HOOP (deg)')
-            plt.xlabel('Timeframe')
+            plt.xlabel('Time (fs)')
             plt.ylim(-43,30)
             plt.title('HOOP')
             plt.savefig('hoop.png')
@@ -401,9 +408,10 @@ def main():
         import mdtraj as md
         pdb = md.load_pdb('sphere.pdb')
 
-        hbond=md.baker_hubbard(pdb)
-        for hb in hbond:
-            print(hb)
+        #hbond=md.baker_hubbard(pdb, exclude_water=False)
+        hbond=md.wernet_nilsson(pdb, exclude_water=False)
+        for hb in hbond[0]:
+            print(pdb.topology.atom(hb[0]).residue, "----",pdb.topology.atom(hb[2]))
 
 
 
