@@ -245,7 +245,7 @@ def main():
         #traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
         #traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
 
-        #traj=mdtraj.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+        #traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
         #del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
         # Chromophore indices
@@ -309,20 +309,21 @@ def main():
             n=len(i_torsion)
             t=np.linspace(0, len(i_torsion)-1, len(i_torsion))
             z=np.linspace(0, len(i_torsion)-1, len(i_torsion))
-            alphas=np.linspace(0.8, 0.8, len(i_torsion))
+            alphas=np.linspace(0.1, 0.1, len(i_torsion))
             size=np.linspace(500, 50, len(i_torsion))
 
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(projection='3d')
-            ax.scatter(i_torsion,p_torsion,z, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
+            #fig = plt.figure(figsize=(12, 12))
+            #ax = fig.add_subplot(projection='2d')
+            #ax.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
+            plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
             plt.ylabel('P-torsion')
             plt.xlabel('I-torsion')
             plt.xlim(-80,80)
             plt.ylim(-80,80) 
             #plt.ylim(-43,30)
             plt.title('P-I-Torsion')
-            #cbar=plt.colorbar()
-            #cbar.set_label('Time (fs)')
+            cbar=plt.colorbar()
+            cbar.set_label('Time (fs)')
             #plt.savefig('i-p-torsion-2d.png')
             #plt.close()
             plt.show(block = True)
@@ -357,9 +358,6 @@ def main():
                 plt.savefig(fig_name)
                 plt.show(block = True)
                 plt.close()
-
-
-
 
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
