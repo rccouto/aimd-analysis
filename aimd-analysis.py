@@ -163,6 +163,35 @@ def read_table(file):
     f.close()
     return np.array(a)
 
+
+# Set the Input Name
+def OutName(name, ext, i):
+    """" Setup a name of an output file in a formatted sequential way from a loop.
+    
+    Params: 
+        name - the desired file name
+        ext  - extension of desired file
+        i    - the index
+
+    Result/Return:
+        File name in the proper format. 
+    """
+
+    if i > 9999:
+        var = "-%s.%s" % (i,ext)
+    elif i > 999:
+        var = "-0%s.%s" % (i,ext)
+    elif i > 99:
+        var = "-00%s.%s" % (i,ext) 
+    elif i > 9:
+        var = "-000%s.%s" % (i,ext)       
+    else:
+        var = "-0000%s.%s" % (i,ext)
+    
+    out=name.rsplit( ".", 1 )[ 0 ] + var
+    
+    return out
+
 # MAIN PROGRAM
 def main():
     import sys
@@ -175,6 +204,7 @@ def main():
     f.add_option('--plot' , type = str,  default = None, help='Plot with matplotlib.')
     f.add_option('--dist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
+    f.add_option('--spc' , action = "store_true", default = False, help='Extract structures from trajectory for single point calculations.')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -225,41 +255,49 @@ def main():
     elif arg.analyze:
         # Load MDTraj
         import mdtraj as md
-        # ON MACMINI
-        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
-        # ON BERZELIUS
-        #sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
-        import geom_param as gp
+        import socket
 
-        # LOAD TRAJECTORIE(S)
-        topology = md.load_prmtop('sphere.prmtop')
-        # ON MACMINI
-        traj = md.load_dcd('coors.dcd', top = topology)
-        # ON BERZELIUS
-        #traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
-        #traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
-        #traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
-        #traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
-        #traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
-        #traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
-        #traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
-        #traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+        # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+            # LOAD TRAJECTORIE(S)
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors.dcd', top = topology)
 
-        #traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
-        #del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
 
+        # Radian to degrees
+        r2d=57.2958
+
         if arg.analyze == "hoop" or arg.analyze == "all":
-            # Compute and plot the teta angle for the whole trajectory
+            """ 
+            Compute and plot the teta angle for the whole trajectory
+            """
             teta_pyra=[]
             for i in range(len(traj)):
                  # Pyra Indexes: 22(C4), 23(H8), 24(C1), 21(C5) - as in the List,ChemSci2022 paper
                 teta = gp.compute_pyramidalization(traj.xyz[i,chrome,:],22,23,24,21)
                 teta_pyra.append(teta)
 
-            t=np.linspace(0, len(teta_pyra)-1, len(teta_pyra))
+            t=np.linspace(0, len(teta_pyra)-1, len(teta_pyra))*0.5
             plt.plot(t, teta_pyra)
             plt.ylabel('HOOP (deg)')
             plt.xlabel('Time (fs)')
@@ -270,8 +308,10 @@ def main():
             #plt.show(block = True)
             
 
-        if arg.analyze == "rotation" or arg.analyze == "all4":
-            # Compute and plot the torsion angle for the whole trajectory
+        if arg.analyze == "rotation":
+            """
+            Compute and plot the rotation of angle of a group 
+            """
             teta_rotation=[]
             for i in range(len(traj)):
                 # S-H rotation angle
@@ -287,6 +327,9 @@ def main():
             plt.close()
 
         if arg.analyze == "torsion" or arg.analyze == "all":
+            """"
+            Compute the torsion 
+            """
             import matplotlib.cm as cm
 
             # Compute the I- and P-torsion angles
@@ -306,15 +349,50 @@ def main():
                 teta = gp.compute_torsion5(traj.xyz[i,chrome,:],p_pair,p_triple)
                 p_torsion.append(teta)
 
-            n=len(i_torsion)
-            t=np.linspace(0, len(i_torsion)-1, len(i_torsion))
-            z=np.linspace(0, len(i_torsion)-1, len(i_torsion))
-            alphas=np.linspace(0.1, 0.1, len(i_torsion))
-            size=np.linspace(500, 50, len(i_torsion))
+            # Time 
+            t=np.linspace(0, len(i_torsion)-1, len(i_torsion))*0.5
+
+            #  Plot I-torsion
+            plt.plot(t,i_torsion)
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.ylim(-80,80)
+            plt.title('I Dihedral angle')
+            plt.savefig('I_dihedral.png')
+            #plt.show(block = True)
+            plt.close()
+
+            #  Plot P-torsion
+            plt.plot(t,p_torsion)
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.title('P Dihedral angle')
+            plt.ylim(-80,80)
+            plt.savefig('P_dihedral.png')
+            #plt.show(block = True)
+            plt.close()
+
+            #  Plot I- and P-torsion together
+            plt.plot(t,i_torsion, label="P-torsion")
+            plt.plot(t,p_torsion, label="I-torsion")
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.title('P- and I- Dihedral angle')
+            plt.ylim(-80,80)
+            plt.legend()
+            plt.savefig('P-I_dihedral.png')
+            #plt.show(block = True)
+            plt.close()
+
+            # 2D plot of I-torsion X P-torsion
+            #n=len(i_torsion)
+            #z=np.linspace(0, len(i_torsion)-1, len(i_torsion))
+            alphas=np.linspace(1, 1, len(i_torsion))
+            size=np.linspace(50, 50, len(i_torsion))
 
             #fig = plt.figure(figsize=(12, 12))
-            #ax = fig.add_subplot(projection='2d')
-            #ax.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
+            #ax = fig.add_subplot(projection='3d')
+            #ax.scatter(i_torsion,p_torsion,t, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
             plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
             plt.ylabel('P-torsion')
             plt.xlabel('I-torsion')
@@ -322,13 +400,13 @@ def main():
             plt.ylim(-80,80) 
             #plt.ylim(-43,30)
             plt.title('P-I-Torsion')
-            cbar=plt.colorbar()
+            cbar=plt.colorbar(values=t)
             cbar.set_label('Time (fs)')
             #plt.savefig('i-p-torsion-2d.png')
             #plt.close()
             plt.show(block = True)
 
-        if arg.analyze == "distance" or arg.analyze == "all":
+        if arg.analyze == "distance":
             
             table=read_table("closest-atoms-indexes.dat")
             #print(table)
@@ -358,6 +436,27 @@ def main():
                 plt.savefig(fig_name)
                 plt.show(block = True)
                 plt.close()
+
+        if arg.analyze == "flap" or arg.analyze == "all":
+            """"
+            Compute the flapping angle.
+            """
+            h1 = np.array([[944, 945, 948, 951]], dtype=np.int32)
+
+            flap_dihedral_angle = md.compute_dihedrals(traj, h1)
+
+            t=np.linspace(0, len(flap_dihedral_angle)-1, len(flap_dihedral_angle))*0.5
+
+            plt.plot(t,flap_dihedral_angle*r2d)
+            plt.ylabel('Flapping Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.ylim(-40,32)
+            plt.title('Flapping Dihedral angle')
+            plt.savefig('flap_dihedral.png')
+            #plt.show(block = True)
+            plt.close()
+
+
 
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
@@ -409,8 +508,60 @@ def main():
         #hbond=md.baker_hubbard(pdb, exclude_water=False)
         hbond=md.wernet_nilsson(pdb, exclude_water=False)
         for hb in hbond[0]:
-            print(pdb.topology.atom(hb[0]).residue, "----",pdb.topology.atom(hb[2]))
+            if str(pdb.topology.atom(hb[2]).residue) == 'GYC61':
+                print(pdb.topology.atom(hb[0]), "--",pdb.topology.atom(hb[1]),"--",pdb.topology.atom(hb[2]))
 
+    if arg.spc == True:
+        """"
+        Extract a given molecule from the a QM/MM AIMD trajectory 
+        and perform single point energy calculation with TeraChem. 
+        """
+        import mdtraj as md
+        import numpy as np
+        import socket
+        
+        # LOAD TRAJECTORIE(S)
+        topology = md.load_prmtop('sphere.prmtop')
+
+        # ON MACMINI
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            traj = md.load_dcd('coors.dcd', top = topology)
+        else:
+        # ON BERZELIUS
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+        # Get the index for the target molecule.
+        #target = traj.topology.select('resname GYC')
+        target = [924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+        # Index of connections to be substituted by H
+        subH=[908,961]
+        mol=np.append(target, subH)
+
+        # Generate XYZ files for each trajectory frame. 
+        for t in range(len(traj)):
+            # File name
+            xyz = OutName("tfhbdi", "xyz", t)
+            out=open(xyz, 'w')
+
+            out.write('{}\n'.format(len(mol)))
+            out.write('Frame {}\n'.format(t))
+            for i in range(len(mol)):
+                # Check if atom is in the H substitution list
+                if mol[i] in subH:
+                    out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                else:
+                    out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+            out.close()
 
 
 if __name__=="__main__":
