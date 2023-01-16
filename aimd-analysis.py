@@ -514,7 +514,7 @@ def main():
     if arg.spc == True:
         """"
         Extract a given molecule from the a QM/MM AIMD trajectory 
-        and perform single point energy calculation with TeraChem. 
+        and to perform single point energy calculation with TeraChem. 
         """
         import mdtraj as md
         import numpy as np
@@ -549,19 +549,21 @@ def main():
 
         # Generate XYZ files for each trajectory frame. 
         for t in range(len(traj)):
-            # File name
-            xyz = OutName("tfhbdi", "xyz", t)
-            out=open(xyz, 'w')
+            
+            if (t % 4) == 0:
+                # File name
+                xyz = OutName("tfhbdi", "xyz", t)
+                out=open(xyz, 'w')
 
-            out.write('{}\n'.format(len(mol)))
-            out.write('Frame {}\n'.format(t))
-            for i in range(len(mol)):
-                # Check if atom is in the H substitution list
-                if mol[i] in subH:
-                    out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-                else:
-                    out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-            out.close()
+                out.write('{}\n'.format(len(mol)))
+                out.write('Frame {}\n'.format(t))
+                for i in range(len(mol)):
+                    # Check if atom is in the H substitution list
+                    if mol[i] in subH:
+                        out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                    else:
+                        out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                out.close()
 
 
 if __name__=="__main__":
