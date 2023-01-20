@@ -530,6 +530,21 @@ def main():
         out.close()
 
     if arg.hb == True:
+        """" Identify the hydrogen bonds, that involves a given target, 
+        present in the trajectory, for all frames of the dynamics (time-dependent).
+
+        Params: the path to the trajectory files and the target should be given below.
+
+        Result/Return:  It will save two files containing the time-depent information 
+        regarding which atoms are involved in the HB network.
+                        It will save a figure "hb.png" containing three plots:
+                        1) Number of HB
+                        2) Residue-Hydrogen and occurances. 
+                        3) Residue-acceptor of the HB
+                        All time-dependent  
+
+        """
+
         import mdtraj as md
         import numpy as np
         import socket
@@ -556,44 +571,49 @@ def main():
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
-        number_hb=[]
-        rhb=[]
+        # SET UP THE ARRAY FOR THE HB COUNT
         hb_size=100
-        res_hb = np.zeros([(len(traj)), hb_size])
+        hb_hydrogen_count = np.zeros([(len(traj)), hb_size])
         hb_recept_count = np.zeros([(len(traj)), hb_size])
 
-        # Save to file 
+        # SAVE INFO FILES 
         out = open("hydrogen-bonding.dat", 'w')
         out2 = open("hydrogen-bonding-td.dat", 'w')
         out2.write("# t (fs) / N_HB /  RES  /  H   / CHROME\n")
 
+        # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
         hbond=md.wernet_nilsson(traj, exclude_water=True)
 
-        hb_res=[]
+        # SET UP ARRAYS AND SETS
+        number_hb=[]
+        hb_res_h=[]
         try_set=set()
         hb_recept=[]
         try_set_recept=set()
-        target_hb_don=set()
         max_n=0
+
+        # LOOP OF THE TRAJECTORY FRAMES
         for i in range(len(traj)):
             out.write("HBs \n")
             nhb = 0
+            # LOOP OVER THE IDENTIFIED HYDROGEN BONDS
             for hb in hbond[i]:
-                # Only HB involving the target GYC60
+                # ONLY HB INVOLVING THE TARGET GYC60
                 if str(traj.topology.atom(hb[2]).residue) == 'GYC60' or  str(traj.topology.atom(hb[0]).residue) == 'GYC60':
                                         
-                    # USE SET TO IDENTIFY UNIQUE HB DONATOR RESIDUES AND APPEND TO ARRAY
+                    # USE SET TO IDENTIFY UNIQUE HB RESIDUES-HYDROIGEN AND APPEND TO ARRAY
                     if traj.topology.atom(hb[1]) not in try_set:
                         try_set.add(traj.topology.atom(hb[1]))
-                        hb_res.append(str(traj.topology.atom(hb[1])))
+                        hb_res_h.append(str(traj.topology.atom(hb[1])))
                     
-                    # Loop over the DONATOR residues
-                    for j in range(len(hb_res)):
-                        # IF residue in the list
-                        if str(traj.topology.atom(hb[1])) == str(hb_res[j]):    
-                            res_hb[i][j]+=10
-                            out.write("%d  %s -- %s -- %s \n" % (res_hb[i][j], traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
+                    # LOOP OVER THE RESIDUE-HYDROGEN 
+                    for j in range(len(hb_res_h)):
+                        # IF RESIDUE ON THE LIST
+                        if str(traj.topology.atom(hb[1])) == str(hb_res_h[j]):    
+                            hb_hydrogen_count[i][j]+=10
+                            out.write("%d  %s -- %s -- %s \n" % (hb_hydrogen_count[i][j], traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
                             break
+                    # HB COUNTER
                     nhb += 1 
 
                     # USE SET TO IDENTIFY UNIQUE HB RECEPTOR RESIDUES AND APPEND TO ARRAY
@@ -606,66 +626,66 @@ def main():
                         # IF residue in the list
                         if str(traj.topology.atom(hb[2])) == str(hb_recept[j]):    
                             hb_recept_count[i][j]+=10
-                            if hb_recept_count[i][j] > max_n:
-                                max_n=hb_recept_count[i][j]
                             break 
 
-                    # Write to file
+                    # WRITE TO FILE
                     out2.write("%6.1f %d %s --- %s --- %s \n" % (i*0.5, nhb, traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
             out.write("Time = %6.1f fs, Total HB %d \n" % (i*0.5, nhb))
             number_hb.append(nhb)
         out.close()
         out2.close()
 
-        print(max_n)
-
-        # Resize the res_hb array to hb_res
-        res_hb=np.array(res_hb, order='F')
-        res_hb.resize(len(traj), len(hb_res))
-
-        # Set up to plot
-        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
-        r=np.linspace(0, len(hb_res)-1, len(hb_res))
-        X,Y=np.meshgrid(t,r)
-        Z=np.transpose(res_hb)
-        
-        # Fig/plot specs
+        # SET UP FIGURE SPECS
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 1]})
         fig.tight_layout()
         fig.set_figheight(10)
-        fig.set_figwidth(15)
+        fig.set_figwidth(18)
         plt.subplots_adjust(hspace=0)
 
+        # PLOT THE HB COUNTER
+        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
         ax1.bar(t,number_hb)
         ax1.set_ylabel("Number of HB")
         ax1.set_xticklabels([])
 
+        ### PLOT THE RESIDUE-HYDROGEN COUNTER
+        # RESIZE THE hb_hydrogen_count ARRAY TO hb_res_h
+        hb_hydrogen_count=np.array(hb_hydrogen_count, order='F')
+        hb_hydrogen_count.resize(len(traj), len(hb_res_h))
+
+        # SET UP THE DATA
+        r=np.linspace(0, len(hb_res_h)-1, len(hb_res_h))
+        X,Y=np.meshgrid(t,r)
+        Z=np.transpose(hb_hydrogen_count)
+        
+        #PLOT 
         cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
-        ax2.set_yticks(r, list(hb_res))
-        ax2.set_ylabel("Residue-Hydrogen involved in the HB")
+        ax2.set_yticks(r, list(hb_res_h))
+        ax2.set_ylabel("Residue-Hydrogen of the HB")
         ax2.set_xlabel("Time (fs)")
         ax2.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
-
-
         
-        # PLOT THE RECEPTOR 
+        ### PLOT THE HB RECEPTOR 
+        # RESIZE THE hb_recept_count ARRAY TO hb_recept
         hb_recept_count=np.array(hb_recept_count, order='F')
         hb_recept_count.resize(len(traj), len(hb_recept))
-
+        
+        # SET UP THE DATA
         t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
         r=np.linspace(0, len(hb_recept)-1, len(hb_recept))
         X,Y=np.meshgrid(t,r)
         Z=np.transpose(hb_recept_count)
 
+        #PLOT 
         cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
         ax3.set_yticks(r, list(hb_recept))
         ax3.set_ylabel("HB receptor")
         ax3.set_xlabel("Time (fs)")
         ax3.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
         
+        # SAVE FIGURE AND EXIT
         plt.savefig('hb.png')
         plt.close()
-
         #plt.show(block = True)
 
     if arg.spc == True:
