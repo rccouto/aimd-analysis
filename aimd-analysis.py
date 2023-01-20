@@ -550,6 +550,7 @@ def main():
         import socket
         import matplotlib
         import matplotlib.colors
+        import hbond as hb
 
         ################
         ## TARGET RESIDUE
@@ -589,7 +590,8 @@ def main():
 
         print('-- Computing HBs')
         # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
-        hbond=md.wernet_nilsson(traj, exclude_water=arg.with2o)
+        hbond = hb.wernet_nilsson(traj, target, exclude_water=False)
+        #hbond=md.wernet_nilsson(traj, exclude_water=arg.with2o)
         print('-- DONE --')
 
         # SET UP ARRAYS AND SETS
@@ -789,7 +791,7 @@ def main():
 
 
     if arg.test == True:
-        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
+        #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
         import hbond as hb
         import mdtraj as md 
         import numpy as np
@@ -798,7 +800,7 @@ def main():
         traj = md.load_dcd('coors.dcd', top = topology)
 
         target='GYC60'
-        hbond = hb.wernet_nilsson(traj, None, exclude_water=True)
+        hbond = hb.wernet_nilsson(traj, target, exclude_water=False)
         print(len(hbond))
 
         for i in range(len(traj)):
