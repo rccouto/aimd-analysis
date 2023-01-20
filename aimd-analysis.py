@@ -132,22 +132,14 @@ def compute_neighbors (
   
   neighbor_resnames=set()
   neighbor_resids = set()
-  #print('Query indices: {}'.format(query_idxs))
-  #print(query_idxs)
+
   neighbor_atoms = md.compute_neighbors(pdb, cutoff, query_idxs)
-  #print(neighbor_atoms)
+
   for atom_idx in neighbor_atoms[0]:
     resname =  pdb.topology.atom(atom_idx).residue
     resid =  pdb.topology.atom(atom_idx).residue.index
     neighbor_resnames.add(resname)
     neighbor_resids.add(resid)
-    #print(atom_idx, resname, resid)
-
-  #print('Neighbors within {} Angstroms'.format(cutoff*10))
-  #print(neighbor_resnames)
-  #for neightbor in neighbor_resnames:
-  #  print(neightbor)
-  #print(neighbor_resids)
 
   return list(neighbor_resids), list(neighbor_resnames)
 
@@ -205,6 +197,9 @@ def main():
     f.add_option('--dist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
     f.add_option('--spc' , action = "store_true", default = False, help='Extract structures from trajectory for single point calculations.')
+    f.add_option('--test' , action="store_true",  default=False, help='For testing purposes')
+    f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrigen bonding only.')
+    f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -457,59 +452,221 @@ def main():
             plt.close()
 
 
-
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
             sys.exit(1)
 
     if arg.dist == True:
         import mdtraj as md
+        import numpy as np
+        import socket
 
+        # LOAD TRAJECTORIE(S)
+        topology = md.load_prmtop('sphere.prmtop')
+
+        # ON MACMINI
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            traj = md.load_dcd('coors.dcd', top = topology)
+        else:
+        # ON BERZELIUS
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+        #print(len(traj[0]))
         # Get the index for the residues surrounding the chromophore.
-        pdb = md.load_pdb('sphere.pdb')
-        chrome = pdb.topology.select('resname GYC')
-        sur_resids, sur_resname = compute_neighbors(pdb,chrome)
+        #traj = md.load_pdb('sphere.pdb')
+        #print(len(pdb))
+        
+        # Use just the first frame for this analyis
+        traj=traj[0]
+
+        chrome = traj.topology.select('resname GYC')
+        sur_resids, sur_resname = compute_neighbors(traj,chrome)
 
         out = open("closest-atoms-indexes.dat", 'w')
         out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
         # Run over the residues surrounding GYC
         print("Closest atom from a residue to the chromophore\n")
-        print("Residue (Element)       Index   Chromophore     Index   Dist (AA)\n------------------------------------------------------------------")
+        print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
         for i in range(len(sur_resids)):
-            res_ids=pdb.topology.select('resid %s' % sur_resids[i])
+            #print("Get res_ids")
+            res_ids=traj.topology.select('resid %s' % sur_resids[i])
             #print(sur_resname[i])
 
             # Run over the atoms within the residue
             d=10000
+            #print("Run over res_ids", res_ids)
             for atm in res_ids:
+                #print("Run over chrome ", atm)
                 for chm in chrome:
+                    #print("chm", chm)
                     pair=np.array([[atm,chm]], dtype=np.int32) # P-ring <> HIP190
-                    dist = md.compute_distances(pdb,pair)
+                    dist = md.compute_distances(traj,pair)
                     
                     if dist < d:
                         d = dist
                         a1 = atm
                         a2 = chm
 
-            resname=pdb.topology.atom(a1).residue
-            res_element=pdb.topology.atom(a1).element
-            chrm_element=pdb.topology.atom(a2).element
+            resname=traj.topology.atom(a1)
+            res_element=traj.topology.atom(a1).element
+            chrm_element=traj.topology.atom(a2)
 
             t=str(resname)
-            if not t.startswith("H") and d > 0.0:
-                print('{:<5s}\t({:<8s})\t{:<4d}\tGYC({:<8s})\t{:<5d}\t{:>2.4f}'.format(str(resname), str(res_element), a1, str(chrm_element), a2, float(d*10)))
+            #if not t.startswith("H") and d > 0.0:
+            if d > 0.0:
+                #print('{:<5s}\t({:<8s})\t{:<4d}\tGYC({:<8s})\t{:<5d}\t{:>2.4f}'.format(str(resname), str(res_element), a1, str(chrm_element), a2, float(d*10)))
+                print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
                 out.write("%s %d %d\n" % (resname, a1, a2))
         out.close()
 
     if arg.hb == True:
         import mdtraj as md
-        pdb = md.load_pdb('sphere.pdb')
+        import numpy as np
+        import socket
+        import matplotlib
+        import matplotlib.colors
 
-        #hbond=md.baker_hubbard(pdb, exclude_water=False)
-        hbond=md.wernet_nilsson(pdb, exclude_water=False)
-        for hb in hbond[0]:
-            if str(pdb.topology.atom(hb[2]).residue) == 'GYC61':
-                print(pdb.topology.atom(hb[0]), "--",pdb.topology.atom(hb[1]),"--",pdb.topology.atom(hb[2]))
+        # LOAD TRAJECTORIE(S)
+        topology = md.load_prmtop('sphere.prmtop')
+
+        # ON MACMINI
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            traj = md.load_dcd('coors.dcd', top = topology)
+        else:
+        # ON BERZELIUS
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+        number_hb=[]
+        rhb=[]
+        hb_size=100
+        res_hb = np.zeros([(len(traj)), hb_size])
+        hb_recept_count = np.zeros([(len(traj)), hb_size])
+
+        # Save to file 
+        out = open("hydrogen-bonding.dat", 'w')
+        out2 = open("hydrogen-bonding-td.dat", 'w')
+        out2.write("# t (fs) / N_HB /  RES  /  H   / CHROME\n")
+
+        hbond=md.wernet_nilsson(traj, exclude_water=True)
+
+        hb_res=[]
+        try_set=set()
+        hb_recept=[]
+        try_set_recept=set()
+        target_hb_don=set()
+        max_n=0
+        for i in range(len(traj)):
+            out.write("HBs \n")
+            nhb = 0
+            for hb in hbond[i]:
+                # Only HB involving the target GYC60
+                if str(traj.topology.atom(hb[2]).residue) == 'GYC60' or  str(traj.topology.atom(hb[0]).residue) == 'GYC60':
+                                        
+                    # USE SET TO IDENTIFY UNIQUE HB DONATOR RESIDUES AND APPEND TO ARRAY
+                    if traj.topology.atom(hb[1]) not in try_set:
+                        try_set.add(traj.topology.atom(hb[1]))
+                        hb_res.append(str(traj.topology.atom(hb[1])))
+                    
+                    # Loop over the DONATOR residues
+                    for j in range(len(hb_res)):
+                        # IF residue in the list
+                        if str(traj.topology.atom(hb[1])) == str(hb_res[j]):    
+                            res_hb[i][j]+=10
+                            out.write("%d  %s -- %s -- %s \n" % (res_hb[i][j], traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
+                            break
+                    nhb += 1 
+
+                    # USE SET TO IDENTIFY UNIQUE HB RECEPTOR RESIDUES AND APPEND TO ARRAY
+                    if traj.topology.atom(hb[2]) not in try_set_recept:
+                        try_set_recept.add(traj.topology.atom(hb[2]))
+                        hb_recept.append(str(traj.topology.atom(hb[2])))
+
+                    # LOOP OVER RECEPTOR RESIDUES
+                    for j in range(len(hb_recept)):
+                        # IF residue in the list
+                        if str(traj.topology.atom(hb[2])) == str(hb_recept[j]):    
+                            hb_recept_count[i][j]+=10
+                            if hb_recept_count[i][j] > max_n:
+                                max_n=hb_recept_count[i][j]
+                            break 
+
+                    # Write to file
+                    out2.write("%6.1f %d %s --- %s --- %s \n" % (i*0.5, nhb, traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
+            out.write("Time = %6.1f fs, Total HB %d \n" % (i*0.5, nhb))
+            number_hb.append(nhb)
+        out.close()
+        out2.close()
+
+        print(max_n)
+
+        # Resize the res_hb array to hb_res
+        res_hb=np.array(res_hb, order='F')
+        res_hb.resize(len(traj), len(hb_res))
+
+        # Set up to plot
+        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        r=np.linspace(0, len(hb_res)-1, len(hb_res))
+        X,Y=np.meshgrid(t,r)
+        Z=np.transpose(res_hb)
+        
+        # Fig/plot specs
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 1]})
+        fig.tight_layout()
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
+        plt.subplots_adjust(hspace=0)
+
+        ax1.bar(t,number_hb)
+        ax1.set_ylabel("Number of HB")
+        ax1.set_xticklabels([])
+
+        cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
+        ax2.set_yticks(r, list(hb_res))
+        ax2.set_ylabel("Residue-Hydrogen involved in the HB")
+        ax2.set_xlabel("Time (fs)")
+        ax2.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
+
+
+        
+        # PLOT THE RECEPTOR 
+        hb_recept_count=np.array(hb_recept_count, order='F')
+        hb_recept_count.resize(len(traj), len(hb_recept))
+
+        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        r=np.linspace(0, len(hb_recept)-1, len(hb_recept))
+        X,Y=np.meshgrid(t,r)
+        Z=np.transpose(hb_recept_count)
+
+        cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
+        ax3.set_yticks(r, list(hb_recept))
+        ax3.set_ylabel("HB receptor")
+        ax3.set_xlabel("Time (fs)")
+        ax3.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
+        
+        plt.savefig('hb.png')
+        plt.close()
+
+        #plt.show(block = True)
 
     if arg.spc == True:
         """"
@@ -565,6 +722,59 @@ def main():
                         out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
                 out.close()
 
+    if arg.surr == True:
+        import mdtraj as md
+        import socket
+        
+        # LOAD TRAJECTORIE(S)
+        topology = md.load_prmtop('sphere.prmtop')
+
+        # ON MACMINI
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            traj = md.load_dcd('coors.dcd', top = topology)
+        else:
+        # ON BERZELIUS
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+        chrome = traj.topology.select('resname GYC')
+
+        surr_res=set()
+        for i in  range(len(traj)):
+            print(i)
+            sur_resids, sur_resname = compute_neighbors(traj[i],chrome)
+            
+            for sr in sur_resname:
+                if sr not in surr_res:
+                    surr_res.add(str(sr))
+        
+        print(list(surr_res))
+
+
+    if arg.test == True:
+        import numpy as np
+
+        a=['0','1','2','3','4','2','3','4','2','4','5','6','7','3','4','7','8','9','10','8','9']
+        myset=set()
+        for n in range(len(a)):
+            if a[n] not in myset:
+                myset.add(a[n])
+                print(list(myset))
+
+        #print("Testing module")
+        #x=np.array([[0,1,1,0,0],[0,1,1,0,0],[0,1,1,0,0]], order='F')
+        #print(x)
+        #x.resize(3,3)
+        #print(x)
 
 if __name__=="__main__":
     main()
