@@ -551,6 +551,7 @@ def main():
         import matplotlib
         import matplotlib.colors
         import hbond as hb
+        from matplotlib.lines import Line2D
 
         ################
         ## TARGET RESIDUE
@@ -590,8 +591,7 @@ def main():
 
         print('-- Computing HBs')
         # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
-        hbond = hb.wernet_nilsson(traj, target, exclude_water=False)
-        #hbond=md.wernet_nilsson(traj, exclude_water=arg.with2o)
+        hbond = hb.wernet_nilsson(traj, target, exclude_water=arg.with2o)
         print('-- DONE --')
 
         # SET UP ARRAYS AND SETS
@@ -648,7 +648,7 @@ def main():
         # SET UP FIGURE SPECS
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 1]})
         fig.tight_layout()
-        fig.set_figheight(10)
+        fig.set_figheight(8)
         fig.set_figwidth(18)
         plt.subplots_adjust(hspace=0)
 
@@ -657,6 +657,9 @@ def main():
         ax1.bar(t,number_hb)
         ax1.set_ylabel("Number of HB")
         ax1.set_xticklabels([])
+
+        custom_xlim=(0, len(hbond)*0.5)
+        plt.setp((ax1, ax2, ax3), xlim=custom_xlim)
 
         ### PLOT THE RESIDUE-HYDROGEN COUNTER
         # RESIZE THE hb_hydrogen_count ARRAY TO hb_res_h
@@ -671,6 +674,7 @@ def main():
         #PLOT 
         cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
         ax2.set_yticks(r, list(hb_res_h))
+        ax2.set_ylim(-1, len(hb_res_h)+0.4)
         ax2.set_ylabel("Residue-Hydrogen of the HB")
         ax2.set_xlabel("Time (fs)")
         ax2.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
@@ -688,15 +692,22 @@ def main():
 
         #PLOT 
         cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
+        legend_elements = [ Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', label='1 HB'),
+                            Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='2 HBs'),
+                            Line2D([0], [0], marker='o', color='w', markerfacecolor='green',label='3 HBs'),
+                            Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow',label='4 HBs')]
+
         ax3.set_yticks(r, list(hb_recept))
+        ax3.legend(handles=legend_elements, ncol=4, loc="upper left")
         ax3.set_ylabel("HB receptor")
         ax3.set_xlabel("Time (fs)")
+        ax3.set_ylim(-1, len(hb_recept)+0.6)
         ax3.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
         
         # SAVE FIGURE AND EXIT
         plt.savefig('hb.png')
-        plt.close()
-        #plt.show(block = True)
+        #plt.close()
+        plt.show(block = True)
 
     if arg.spc == True:
         """"
