@@ -572,9 +572,10 @@ def main():
             traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
             traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
 
+            print('-- Combining trajectories')
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
-
+            print('-- DONE --')
         # SET UP THE ARRAY FOR THE HB COUNT
         hb_size=100
         hb_hydrogen_count = np.zeros([(len(traj)), hb_size])
@@ -585,9 +586,11 @@ def main():
         out2 = open("hydrogen-bonding-td.dat", 'w')
         out2.write("# t (fs) / N_HB /  RES  /  H   / CHROME\n")
 
+        print('-- Computing HBs')
         # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
         hbond=md.wernet_nilsson(traj, exclude_water=True)
-        
+        print('-- DONE --')
+
         # SET UP ARRAYS AND SETS
         number_hb=[]
         hb_res_h=[]
