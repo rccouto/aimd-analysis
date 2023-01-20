@@ -200,6 +200,7 @@ def main():
     f.add_option('--test' , action="store_true",  default=False, help='For testing purposes')
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrigen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
+    f.add_option('--with2o' , action="store_false",  default=True, help='Do not exclude water in the HB analysis.')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -588,7 +589,7 @@ def main():
 
         print('-- Computing HBs')
         # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
-        hbond=md.wernet_nilsson(traj, exclude_water=True)
+        hbond=md.wernet_nilsson(traj, exclude_water=arg.with2o)
         print('-- DONE --')
 
         # SET UP ARRAYS AND SETS
