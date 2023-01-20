@@ -542,7 +542,6 @@ def main():
                         2) Residue-Hydrogen and occurances. 
                         3) Residue-acceptor of the HB
                         All time-dependent  
-
         """
 
         import mdtraj as md
@@ -550,6 +549,11 @@ def main():
         import socket
         import matplotlib
         import matplotlib.colors
+
+        ################
+        ## TARGET RESIDUE
+        target='GYC60'
+        #################
 
         # LOAD TRAJECTORIE(S)
         topology = md.load_prmtop('sphere.prmtop')
@@ -583,7 +587,7 @@ def main():
 
         # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
         hbond=md.wernet_nilsson(traj, exclude_water=True)
-
+        
         # SET UP ARRAYS AND SETS
         number_hb=[]
         hb_res_h=[]
@@ -599,7 +603,7 @@ def main():
             # LOOP OVER THE IDENTIFIED HYDROGEN BONDS
             for hb in hbond[i]:
                 # ONLY HB INVOLVING THE TARGET GYC60
-                if str(traj.topology.atom(hb[2]).residue) == 'GYC60' or  str(traj.topology.atom(hb[0]).residue) == 'GYC60':
+                if str(traj.topology.atom(hb[2]).residue) == target or  str(traj.topology.atom(hb[0]).residue) == target:
                                         
                     # USE SET TO IDENTIFY UNIQUE HB RESIDUES-HYDROIGEN AND APPEND TO ARRAY
                     if traj.topology.atom(hb[1]) not in try_set:
@@ -781,20 +785,21 @@ def main():
 
 
     if arg.test == True:
+        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
+        import hbond as hb
+        import mdtraj as md 
         import numpy as np
 
-        a=['0','1','2','3','4','2','3','4','2','4','5','6','7','3','4','7','8','9','10','8','9']
-        myset=set()
-        for n in range(len(a)):
-            if a[n] not in myset:
-                myset.add(a[n])
-                print(list(myset))
+        topology = md.load_prmtop('sphere.prmtop')
+        traj = md.load_dcd('coors.dcd', top = topology)
 
-        #print("Testing module")
-        #x=np.array([[0,1,1,0,0],[0,1,1,0,0],[0,1,1,0,0]], order='F')
-        #print(x)
-        #x.resize(3,3)
-        #print(x)
+        target='GYC60'
+        hbond = hb.wernet_nilsson(traj, None, exclude_water=True)
+        print(len(hbond))
+
+        for i in range(len(traj)):
+            for hb in hbond[i]:
+                print("%s -- %s -- %s \n" % (traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
 
 if __name__=="__main__":
     main()
