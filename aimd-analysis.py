@@ -566,6 +566,9 @@ def main():
             traj = md.load_dcd('coors.dcd', top = topology)
         else:
         # ON BERZELIUS
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/aimd-analysis/hbond')
+            import hbond as hb
+            
             traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
             traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
             traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
