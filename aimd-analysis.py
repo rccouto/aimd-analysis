@@ -709,8 +709,8 @@ def main():
         
         # SAVE FIGURE AND EXIT
         plt.savefig('hb.png')
-        #plt.close()
-        plt.show(block = True)
+        plt.close()
+        #plt.show(block = True)
 
     if arg.spc == True:
         """"
