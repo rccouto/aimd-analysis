@@ -201,6 +201,7 @@ def main():
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrigen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
     f.add_option('--with2o' , action="store_false",  default=True, help='Do not exclude water in the HB analysis.')
+    f.add_option('--minima' , action="store_true",  default=False, help='Minima analysis')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -802,6 +803,37 @@ def main():
                     surr_res.add(str(sr))
         
         print(list(surr_res))
+
+    if arg.minima == True:
+
+        dcd=['f2000-optim.dcd', 'f3400-optim.dcd', 'f5500-optim.dcd', 'f6900.21722-optim.dcd', 'f6900.837-optim.dcd', 'f7600-optim.dcd', 'f9000-optim.dcd']
+        prm=['f2000-sphere.prmtop', 'f5500-sphere.prmtop', 'f6900.837-sphere.prmtop', 'f9000-sphere.prmtop', 'f3400-sphere.prmtop', 'f6900.21722-sphere.prmtop', 'f7600-sphere.prmtop']
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+
+        for i in range(len(dcd)):
+            topology = md.load_prmtop(prm[i])
+            traj = md.load_dcd(dcd[i], top = topology)
+
+            # Compute the I- and P-torsion angles
+            p_torsion=[]
+            i_torsion=[]
+            
+            # I-torsion
+            teta = gp.compute_torsion5(traj.xyz[i,chrome,:],i_pair,i_triple)
+            print("teta")
+            # P-torsion
+            teta = gp.compute_torsion5(traj.xyz[i,chrome,:],p_pair,p_triple)
+            print("teta")
+
+
 
 
     if arg.test == True:
