@@ -184,6 +184,29 @@ def OutName(name, ext, i):
     
     return out
 
+def readxyz(filename):
+    xyzf = open(filename, 'r')
+    xyzarr = np.zeros([1, 3])
+    atomnames = []
+    if not xyzf.closed:
+        # Read the first line to get the number of particles
+        npart = int(xyzf.readline())
+        # and next for title card
+        title = xyzf.readline()
+
+        # Make an N x 3 matrix of coordinates
+        xyzarr = np.zeros([npart, 3])
+        i = 0
+        for line in xyzf:
+            words = line.split()
+            if (len(words) > 3):
+                atomnames.append(words[0])
+                xyzarr[i][0] = float(words[1])
+                xyzarr[i][1] = float(words[2])
+                xyzarr[i][2] = float(words[3])
+                i = i + 1
+    return (xyzarr, atomnames)
+
 # MAIN PROGRAM
 def main():
     import sys
@@ -201,7 +224,7 @@ def main():
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrigen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
     f.add_option('--with2o' , action="store_false",  default=True, help='Do not exclude water in the HB analysis.')
-    f.add_option('--minima' , action="store_true",  default=False, help='Minima analysis')
+    f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -266,6 +289,7 @@ def main():
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
 
+            topology = md.load_prmtop('sphere.prmtop')
             traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
             traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
             traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
@@ -399,7 +423,7 @@ def main():
             plt.title('P-I-Torsion')
             cbar=plt.colorbar(values=t)
             cbar.set_label('Time (fs)')
-            #plt.savefig('i-p-torsion-2d.png')
+            plt.savefig('i-p-torsion-2d.png')
             #plt.close()
             plt.show(block = True)
 
@@ -804,10 +828,41 @@ def main():
         
         print(list(surr_res))
 
-    if arg.minima == True:
+    if arg.minima:
+        import mdtraj as md 
+        import socket
+        import numpy as np
 
-        dcd=['f2000-optim.dcd', 'f3400-optim.dcd', 'f5500-optim.dcd', 'f6900.21722-optim.dcd', 'f6900.837-optim.dcd', 'f7600-optim.dcd', 'f9000-optim.dcd']
-        prm=['f2000-sphere.prmtop', 'f5500-sphere.prmtop', 'f6900.837-sphere.prmtop', 'f9000-sphere.prmtop', 'f3400-sphere.prmtop', 'f6900.21722-sphere.prmtop', 'f7600-sphere.prmtop']
+
+         # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+        import geom_param as gp
+
+        if arg.minima == 'meci':
+            dcd=['f2000-optim.dcd', 'f3400-optim.dcd', 'f5500-optim.dcd', 'f6900.21722-optim.dcd', 'f6900.837-optim.dcd', 'f7600-optim.dcd', 'f9000-optim.dcd']
+            prm=['f2000-sphere.prmtop', 'f3400-sphere.prmtop', 'f5500-sphere.prmtop', 'f6900.21722-sphere.prmtop', 'f6900.837-sphere.prmtop', 'f7600-sphere.prmtop', 'f9000-sphere.prmtop']
+
+            gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
+
+        elif arg.minima == 'is':
+            dcd=['f2000-is-optim.dcd', 'f2700-is-optim.dcd', 'f3400-is-optim.dcd', 'f4100-is-optim.dcd', 'f4800-is-optim.dcd', 'f5500-is-optim.dcd', 'f6200-is-optim.dcd', 'f6900-is-optim.dcd', 'f7600-is-optim.dcd',  'f8300-is-optim.dcd', 'f9000-is-optim.dcd',]
+            prm=['f2000-is-sphere.prmtop', 'f2700-is-sphere.prmtop', 'f3400-is-sphere.prmtop',  'f4100-is-sphere.prmtop', 'f4800-is-sphere.prmtop', 'f5500-is-sphere.prmtop', 'f6200-is-sphere.prmtop', 'f6900-is-sphere.prmtop', 'f7600-is-sphere.prmtop', 'f8300-is-sphere.prmtop', 'f9000-is-sphere.prmtop']
+
+            gasphase=['TFHBDI-S1I2-acas.xyz', 'TFHBDI-S1planar-trans-acas.xyz', 'TFHBDI-S1P-acas.xyz', 'TFHBDI-S1I-acas.xyz', 'TFHBDI-S1planar-acas.xyz']
+
+        elif arg.minima == 'ls1d':
+            dcd=['f2000-ls1d-optim.dcd', 'f2700-ls1d-optim.dcd', 'f3400-ls1d-optim.dcd', 'f4100-ls1d-optim.dcd', 'f4800-ls1d-optim.dcd', 'f5500-ls1d-optim.dcd', 'f6200-ls1d-optim.dcd', 'f6900-ls1d-optim.dcd', 'f7600-ls1d-optim.dcd',  'f8300-ls1d-optim.dcd', 'f9000-ls1d-optim.dcd',]
+            prm=['f2000-ls1d-sphere.prmtop', 'f2700-ls1d-sphere.prmtop', 'f3400-ls1d-sphere.prmtop',  'f4100-ls1d-sphere.prmtop', 'f4800-ls1d-sphere.prmtop', 'f5500-ls1d-sphere.prmtop', 'f6200-ls1d-sphere.prmtop', 'f6900-ls1d-sphere.prmtop', 'f7600-ls1d-sphere.prmtop', 'f8300-ls1d-sphere.prmtop', 'f9000-ls1d-sphere.prmtop']
+
+            gasphase=['TFHBDI-S1I2-acas.xyz', 'TFHBDI-S1planar-trans-acas.xyz', 'TFHBDI-S1P-acas.xyz', 'TFHBDI-S1I-acas.xyz', 'TFHBDI-S1planar-acas.xyz']
+
+        else:
+            print("      Module not available! \n      Rerun with -h to see the options.")
+            sys.exit(1)
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -818,21 +873,71 @@ def main():
         p_pair=[22,21]
         p_triple=[24,27,25]
 
+        I=[]
+        P=[]
+
+        # READ OPTIMIZED DCD FILES
         for i in range(len(dcd)):
             topology = md.load_prmtop(prm[i])
             traj = md.load_dcd(dcd[i], top = topology)
-
-            # Compute the I- and P-torsion angles
-            p_torsion=[]
-            i_torsion=[]
             
             # I-torsion
-            teta = gp.compute_torsion5(traj.xyz[i,chrome,:],i_pair,i_triple)
-            print("teta")
+            teta_i = gp.compute_torsion5(traj.xyz[-1,chrome,:],i_pair,i_triple)
             # P-torsion
-            teta = gp.compute_torsion5(traj.xyz[i,chrome,:],p_pair,p_triple)
-            print("teta")
+            teta_p = gp.compute_torsion5(traj.xyz[-1,chrome,:],p_pair,p_triple)
 
+            I.append(teta_i)
+            P.append(teta_p)
+
+        # Related atoms
+        i_pair=[6,17]
+        i_triple=[5,3,1]
+        p_pair=[5,15]
+        p_triple=[6,9,7]
+
+        # READ XYZ STRUCTURES
+        for i in range(len(gasphase)):
+            coords, atoms = readxyz(gasphase[i])
+
+            # I-torsion
+            teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
+            # P-torsion
+            teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
+
+            I.append(teta_i)
+            P.append(teta_p)
+
+        if arg.minima == "meci":
+            label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GF-MECII', 'GF-MECIP', 'GF-MECIP2']
+        else:
+            label=['f2000', 'f2700', 'f3400', 'f4100', 'f4800', 'f5500', 'f6200', 'f6900', 'f7600', 'f8300', 'f9000', 'GF-S1I2', 'GF-S1planar-trans', 'GF-S1P', 'GF-S1I', 'GF-S1planar']
+
+        fig, ax = plt.subplots()
+        cmap = plt.get_cmap('jet', len(label))
+        z=np.linspace(0,len(label)-1, len(label))
+       
+        scatter = ax.scatter(I,P, s=250, c=z, cmap=cmap, alpha=0.9)
+        
+        plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper left', frameon=False)
+        plt.xlabel("I torsion")
+        plt.ylabel("P torsion")
+        plt.xlim(-200,200)
+        plt.ylim(-200,200) 
+
+        if arg.minima == "meci":
+            plt.title("MECI structures")
+            plt.savefig('meci.png', dpi=300)
+        elif arg.minima == "is":
+            plt.title("S1 minimum from initial structure")
+            plt.savefig('init-struct.png', dpi=300)
+        elif arg.minima == "ls1d":
+            plt.title("S1 minimum from lowest energy in dynamics")
+            plt.savefig('mim-dynam-struct.png', dpi=300)
+
+        plt.show(block = True)
+        plt.close()
+        
+        
 
 
 
@@ -841,6 +946,7 @@ def main():
         import hbond as hb
         import mdtraj as md 
         import numpy as np
+        import matplotlib
 
         topology = md.load_prmtop('sphere.prmtop')
         traj = md.load_dcd('coors.dcd', top = topology)
