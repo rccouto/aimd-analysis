@@ -425,8 +425,8 @@ def main():
             cbar=plt.colorbar(values=t)
             cbar.set_label('Time (fs)')
             plt.savefig('i-p-torsion-2d.png')
-            #plt.close()
-            plt.show(block = True)
+            plt.close()
+            #plt.show(block = True)
 
         if arg.analyze == "distance":
             
@@ -893,7 +893,7 @@ def main():
         # Related atoms
         i_pair=[6,17]
         i_triple=[5,3,1]
-        p_pair=[5,15]
+        p_pair=[5,17]
         p_triple=[6,9,7]
 
         # READ XYZ STRUCTURES
