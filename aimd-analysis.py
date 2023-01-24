@@ -275,6 +275,7 @@ def main():
     elif arg.analyze:
         # Load MDTraj
         import mdtraj as md
+        import numpy as np
         import socket
 
         # ON MACMINI    
@@ -908,9 +909,9 @@ def main():
             P.append(teta_p)
 
         if arg.minima == "meci":
-            label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GF-MECII', 'GF-MECIP', 'GF-MECIP2']
+            label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GP-MECII', 'GP-MECIP', 'GP-MECIP2']
         else:
-            label=['f2000', 'f2700', 'f3400', 'f4100', 'f4800', 'f5500', 'f6200', 'f6900', 'f7600', 'f8300', 'f9000', 'GF-S1I2', 'GF-S1planar-trans', 'GF-S1P', 'GF-S1I', 'GF-S1planar']
+            label=['f2000', 'f2700', 'f3400', 'f4100', 'f4800', 'f5500', 'f6200', 'f6900', 'f7600', 'f8300', 'f9000', 'GP-S1I2', 'GP-S1planar-trans', 'GP-S1P', 'GP-S1I', 'GP-S1planar']
 
         fig, ax = plt.subplots()
         cmap = plt.get_cmap('jet', len(label))
