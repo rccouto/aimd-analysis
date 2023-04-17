@@ -18,12 +18,16 @@ def get_tc_results(file):
         ts - time step
         S - array with MD steps
         E - matrix with CASSCF energies with different roots in columms 
+        D - transition dipole moments 
     """
     
     E=[]
+    D=[]
     S=[]
     ts=0
     getEnergy=0
+
+    dipole = re.compile(r'(\d+)\s+(\d+)\s+([+-]?\d+\.\d*(?:[Ee]-?\d+)?)\s+([+-]?\d+\.\d*(?:[Ee]-?\d+)?)')
 
     for i in open( file ).readlines():
 
@@ -54,14 +58,20 @@ def get_tc_results(file):
              E.append(e)
              #print(s)
 
-        elif re.search(r"Singlet state Mulliken charges for ENUE:", i) is not None and getEnergy == 1:
+        elif re.search(r"   1 ->  ", i) is not None and getEnergy == 1 :
+             words = i.split()
+             d = float(words[7])
+             D.append(d)
+
+        elif re.search(r"Singlet state velocity transition dipole moments:", i) is not None and getEnergy == 1:
              getEnergy=0
 
     nroots=int(len(E)/len(S))
     #print(nroots)
     E=np.array(E).reshape(-1,nroots)
+    D=np.array(D).reshape(-1,2)
 
-    return ts, S, E
+    return ts, S, E, D
 
 def compute_rotation(
     xyz,
@@ -121,11 +131,7 @@ def normalize(vec):
 
     return evec
 
-def compute_neighbors (
-  pdb,
-  query_idxs,
-  cutoff=0.4, #nm, 
-  ):
+def compute_neighbors (pdb, query_idxs, cutoff, water):
   """
   Determine which residues are within cutoff of query indices
   """
@@ -138,8 +144,14 @@ def compute_neighbors (
   for atom_idx in neighbor_atoms[0]:
     resname =  pdb.topology.atom(atom_idx).residue
     resid =  pdb.topology.atom(atom_idx).residue.index
-    neighbor_resnames.add(resname)
-    neighbor_resids.add(resid)
+    if water == False: 
+        if resid < 214:
+            neighbor_resnames.add(resname)
+            neighbor_resids.add(resid)
+    else:
+        neighbor_resnames.add(resname)
+        neighbor_resids.add(resid)
+
 
   return list(neighbor_resids), list(neighbor_resnames)
 
@@ -207,6 +219,8 @@ def readxyz(filename):
                 i = i + 1
     return (xyzarr, atomnames)
 
+
+
 # MAIN PROGRAM
 def main():
     import sys
@@ -221,10 +235,13 @@ def main():
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
     f.add_option('--spc' , action = "store_true", default = False, help='Extract structures from trajectory for single point calculations.')
     f.add_option('--test' , action="store_true",  default=False, help='For testing purposes')
-    f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrigen bonding only.')
+    f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrogen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
     f.add_option('--with2o' , action="store_false",  default=True, help='Do not exclude water in the HB analysis.')
     f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ')
+    f.add_option('--meci' , action="store_true",  default=None, help='MECI analysis')
+    f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
+    f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -517,7 +534,7 @@ def main():
         traj=traj[0]
 
         chrome = traj.topology.select('resname GYC')
-        sur_resids, sur_resname = compute_neighbors(traj,chrome)
+        sur_resids, sur_resname = compute_neighbors(traj,chrome,0.4, True)
 
         out = open("closest-atoms-indexes.dat", 'w')
         out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
@@ -578,7 +595,7 @@ def main():
         import matplotlib.colors
         from matplotlib.lines import Line2D
 
-        ################
+        #################
         ## TARGET RESIDUE
         target='GYC60'
         #################
@@ -821,7 +838,7 @@ def main():
         surr_res=set()
         for i in  range(len(traj)):
             print(i)
-            sur_resids, sur_resname = compute_neighbors(traj[i],chrome)
+            sur_resids, sur_resname = compute_neighbors(traj[i],chrome,0.4, True)
             
             for sr in sur_resname:
                 if sr not in surr_res:
@@ -883,9 +900,9 @@ def main():
             traj = md.load_dcd(dcd[i], top = topology)
             
             # I-torsion
-            teta_i = gp.compute_torsion5(traj.xyz[-1,chrome,:],i_pair,i_triple)
+            teta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
             # P-torsion
-            teta_p = gp.compute_torsion5(traj.xyz[-1,chrome,:],p_pair,p_triple)
+            teta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
 
             I.append(teta_i)
             P.append(teta_p)
@@ -938,11 +955,257 @@ def main():
         plt.show(block = True)
         plt.close()
         
+    if arg.meci:
+        import mdtraj as md 
+        import socket
+        import numpy as np
+
+
+         # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+        import geom_param as gp
+
+
+        # Gas-phase MECI structures
+        gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
+
+        #frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        #type=[Imax, Imin, Pmax, Pmin, PImax]
+
+        frame=[20]
+        type=['Pmax', 'Pmin', 'PImax']
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+
+        I=[]
+        P=[]
+        label=[]
+
+        # READ OPTIMIZED DCD FILES
+        for fm in frame:
+            for tp in type:
+
+                topology = md.load_prmtop(f'meci-f{fm}-{tp}.prmtop')
+                traj = md.load_dcd(f'meci-f{fm}-{tp}.dcd', top = topology)
+                
+                # I-torsion
+                teta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+                # P-torsion
+                teta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+
+                I.append(teta_i)
+                P.append(teta_p)
+                label.append(str(f'f{fm}-{tp}'))
+
+        # Related atoms
+        i_pair=[6,17]
+        i_triple=[5,3,1]
+        p_pair=[5,17]
+        p_triple=[6,9,7]
+
+        # READ XYZ STRUCTURES
+        for i in range(len(gasphase)):
+            coords, atoms = readxyz(gasphase[i])
+
+            # I-torsion
+            teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
+            # P-torsion
+            teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
+
+            I.append(teta_i)
+            P.append(teta_p)
+            LabelName=gasphase[i]
+            label.append(f"GP-{LabelName[7:13]}")
+
+
+        #label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GP-MECII', 'GP-MECIP', 'GP-MECIP2']
+
+
+        fig, ax = plt.subplots()
+        cmap = plt.get_cmap('jet', len(label))
+        z=np.linspace(0,len(label)-1, len(label))
+       
+        scatter = ax.scatter(I,P, s=250, c=z, cmap=cmap, alpha=0.9)
         
+        plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper left', frameon=False)
+        plt.xlabel("I torsion")
+        plt.ylabel("P torsion")
+        plt.xlim(-200,200)
+        plt.ylim(-200,200) 
+
+      
+        #plt.title("MECI structures")
+        #plt.savefig('meci.png', dpi=300)
 
 
+        plt.show(block = True)
+        plt.close()
+        
+    if arg.sim == True:    
+        """
+        Similaritites module
+
+        """
+        import mdtraj as md
+        import numpy as np
+        import matplotlib
+
+        frames=['f2000', 'f2700', 'f3400', 'f4100', 'f4800', 'f5500', 'f6200', 'f6900', 'f7600', 'f8300', 'f9000']
+        #frames=['f2000']
+        
+        # SIDECHAIN
+        #HalfLine=[0.9442111401289468, 0.8771515044856577, 2.56018847039622, 1.5266326665124563, 0.7462042190247257, 0.8469578774597802, 0.9615571258905131, 1.0387622352852939, 1.4527264375858053, 1.8736762535021434, 1.72978352715429]
+        # BACKBONE
+        HalfLine=[-0.17747473034382233, -0.11045843799696559, -0.2064068263802431, -0.15079907558004726, -0.07003044101252691, -0.09834329160200583, -0.1838430207833931, -0.12693914729423988, -0.3225691366605811, -0.1442561473453926, -0.13137948671085134]
+
+        for count, frame in enumerate(frames):
+            print("\n", frame)
+            # Load PDB
+            pdb = md.load_pdb(f"{frame}-1stFrame.pdb")
+            chrome = pdb.topology.select('resname GYC')
+
+            # Load similatities results
+            simList=np.load(f"../results_sidechain/{frame}_KLD_sidechain.npy")
+            simListBackbone=np.load(f"../results_backbone/{frame}_KLD_backbone.npy")
+
+            simList=simList-simListBackbone
+
+            simRes=np.linspace(0, len(simList)-1, len(simList))
+            
+            dist = [0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 2.4]
+
+            colors=['black', 'red', 'green', 'blue', 'cyan', 'pink', 'gray', 'orange']
+            
+            fig, axs=plt.subplots(4, 2)
+            fig.subplots_adjust(hspace = 0.2, wspace=0.1)
+            fig.set_figheight(12)
+            fig.set_figwidth(20)
+            axs = axs.ravel()
+
+            prevRes = [99999]
+            j=0
+            for cutoff in dist:
+                #print("\n ", cutoff)
+                resids, resnames = compute_neighbors(pdb,chrome,cutoff, False)
+                resids.sort()
+
+                currentRes=np.array(resids)
+                layer=np.setdiff1d(currentRes, prevRes)
+
+                layerRes=[]
+                layerTest=[]
+                for i in range(len(simList)):
+                    if simRes[i] in layer:
+                        layerTest.append(int(simRes[i]+1))
+                        layerRes.append(simList[i])
+                        #if simList[i] > HalfLine[count]:
+                        #    print( int(simRes[i]+1), end =" ")
+
+                #print(np.amin(layerRes)/2)
+                #print(np.max(layerRes)/2)
+                #HalfLine=1.8884222802578936/2
+
+                x = np.arange(len(layerTest))
+                wid=len(x)/70
+                axs[j].bar(x,layerRes, color=colors[j], width=wid)
+                axs[j].xaxis.set_tick_params(rotation=45)
+                axs[j].set_xticks(x, layerTest, fontsize=9)
+                axs[j].axhline(y=HalfLine[count],linewidth=1, color='k', linestyle="--")
+
+                #if frame == "f3400":
+                #    axs[j].set_ylim(0,5.2)
+                #elif frame == "f7600":
+                #    axs[j].set_ylim(0,3)
+                #elif frame == "f6900":
+                #    axs[j].set_ylim(0,2.5)
+                #elif frame == "f8300" or frame == "f9000" or frame == "f4100":
+                #    axs[j].set_ylim(0,4)
+                #else:
+                #    axs[j].set_ylim(0,2)
+
+                yMax=(HalfLine[count]*2)-0.05
+                axs[j].set_ylim(0,yMax)
+
+
+                if j == 0:
+                    axs[j].set_title("Radius < %2.1f $\AA$" % (dist[j]*10), y=1.0, pad=-14)
+                elif j == len(dist)-1:
+                    axs[j].set_title("Radius > %2.1f $\AA$" % (dist[j-1]*10), y=1.0, pad=-14)
+                else:
+                    axs[j].set_title("%2.1f <  Radius < %2.1f $\AA$" % (dist[j-1]*10, dist[j]*10), y=1.0, pad=-14)
+        
+                j+=1
+                prevRes=np.array(resids)
+
+            axs[j-1].set_xlabel("Residue index", fontsize=16)
+            axs[j-1].xaxis.set_label_coords(-0.05, -.2)
+
+            axs[j-1].set_ylabel("KLD similarity", fontsize=18)
+            axs[j-1].yaxis.set_label_coords(-1.16, 2.3)
+
+            plt.savefig(f"{frame}_KLD_backbone_radius.png", dpi=300)
+
+            #plt.savefig(f"{frame}_KLD_sidechain_radius.png", dpi=300)
+            #plt.close()
+            #plt.show()
+
+
+    if arg.torsion == True:
+
+        #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
+        import hbond as hb
+        import mdtraj as md 
+        import numpy as np
+        import matplotlib
+
+
+        for frame in ['2000']: #, '2700', '3400', '4100', '4800', '5500', '6200', '6900', '7600', '8300', '9000']:
+
+            Itorsion=np.load(f"i_torsion-frame_{frame}.npy")
+            Ptorsion=np.load(f"p_torsion-frame_{frame}.npy")
+
+            print(frame)
+            
+            Imax=np.nanmax(Itorsion)
+            Imin=np.nanmin(Itorsion)
+            for  count, t in enumerate(Itorsion):
+                if t == Imax:
+                    print("Itorsion max", count, t)
+                elif t == Imin:
+                    print("Itorsion min", count, t)
+
+            Pmax=np.nanmax(Ptorsion)
+            Pmin=np.nanmin(Ptorsion)
+            for  count, t in enumerate(Ptorsion):
+                if t == Pmax:
+                    print("Ptorsion max", count, t)
+                elif t == Pmin:
+                    print("Ptorsion min", count, t)
+
+
+            PImax=np.nanmax(abs(Itorsion)+abs(Ptorsion))
+            for  count, t in enumerate(abs(Itorsion)+abs(Ptorsion)):
+                if t == PImax:
+                    print("PItorsion max", count, t)
+                    print("Itorsion", Itorsion[count])
+                    print("Ptorsion", Ptorsion[count])
+        #print(PImax)
+        #plt.plot(abs(Itorsion)+abs(Ptorsion))
+        #plt.show()
 
     if arg.test == True:
+
         #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
         import hbond as hb
         import mdtraj as md 
@@ -951,14 +1214,13 @@ def main():
 
         topology = md.load_prmtop('sphere.prmtop')
         traj = md.load_dcd('coors.dcd', top = topology)
+        
+        frame0=traj[0]
+        frame0.save_dcd('frame0.dcd')
+        #print(traj[1])
 
-        target='GYC60'
-        hbond = hb.wernet_nilsson(traj, target, exclude_water=False)
-        print(len(hbond))
 
-        for i in range(len(traj)):
-            for hb in hbond[i]:
-                print("%s -- %s -- %s \n" % (traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
+
 
 if __name__=="__main__":
     main()
