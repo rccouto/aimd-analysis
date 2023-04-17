@@ -973,11 +973,11 @@ def main():
         # Gas-phase MECI structures
         gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
 
-        #frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
-        #type=[Imax, Imin, Pmax, Pmin, PImax]
+        frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        type=[Imax, Imin, Pmax, Pmin, PImax]
 
-        frame=[20]
-        type=['Pmax', 'Pmin', 'PImax']
+        #frame=[20]
+        #type=['Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
