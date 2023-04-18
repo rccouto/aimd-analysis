@@ -388,6 +388,46 @@ def main():
                 teta = gp.compute_torsion5(traj.xyz[i,chrome,:],p_pair,p_triple)
                 p_torsion.append(teta)
 
+            # Save data to file
+            np.save("i_torsion.npy",np.array(i_torsion))
+            np.save("p_torsion.npy",np.array(p_torsion))
+
+
+            Imax=np.nanmax(i_torsion)
+            Imin=np.nanmin(i_torsion)
+            for  count, t in enumerate(i_torsion):
+                if t == Imax:
+                    print("Itorsion max", count, t)
+                    ImaxTraj=traj[count]
+                    ImaxTraj.save_amberrst7('Imax.rst7')
+                elif t == Imin:
+                    print("Itorsion min", count, t)
+                    IminTraj=traj[count]
+                    IminTraj.save_amberrst7('Imin.rst7')
+
+            Pmax=np.nanmax(p_torsion)
+            Pmin=np.nanmin(p_torsion)
+            for  count, t in enumerate(p_torsion):
+                if t == Pmax:
+                    print("Ptorsion max", count, t)
+                    PmaxTraj=traj[count]
+                    PmaxTraj.save_amberrst7('Pmax.rst7')
+                elif t == Pmin:
+                    print("Ptorsion min", count, t)
+                    PminTraj=traj[count]
+                    PminTraj.save_amberrst7('Pmin.rst7')
+
+            moduleIP=abs(np.array(i_torsion))+abs(np.array(p_torsion))
+            PImax=np.nanmax(moduleIP)
+            for  count, t in enumerate(moduleIP):
+                if t == PImax:
+                    print("PItorsion max", count, t)
+                    print("Itorsion", i_torsion[count])
+                    print("Ptorsion", p_torsion[count])
+                    PIminTraj=traj[count]
+                    PIminTraj.save_amberrst7('PImax.rst7')
+            
+
             # Time 
             t=np.linspace(0, len(i_torsion)-1, len(i_torsion))*0.5
 
@@ -973,11 +1013,11 @@ def main():
         # Gas-phase MECI structures
         gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
 
-        frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
-        type=[Imax, Imin, Pmax, Pmin, PImax]
+        #frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        #type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
 
-        #frame=[20]
-        #type=['Pmax', 'Pmin', 'PImax']
+        frame=[20, 27]
+        type=['Imax', 'Imin','Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -988,17 +1028,23 @@ def main():
         p_pair=[22,21]
         p_triple=[24,27,25]
 
-        I=[]
-        P=[]
+        # SETUP FIG
+        fig, ax = plt.subplots()
+        cmap = plt.get_cmap('jet', len(frame))
+        
+        
         label=[]
-
         # READ OPTIMIZED DCD FILES
         for fm in frame:
+            I=[]
+            P=[]
             for tp in type:
 
                 topology = md.load_prmtop(f'meci-f{fm}-{tp}.prmtop')
                 traj = md.load_dcd(f'meci-f{fm}-{tp}.dcd', top = topology)
-                
+                #traj = md.load_dcd(f'meci-f{fm}-{tp}.rst7', top = topology)
+                #print(len(traj))
+                N=len(traj)-1
                 # I-torsion
                 teta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
                 # P-torsion
@@ -1006,7 +1052,11 @@ def main():
 
                 I.append(teta_i)
                 P.append(teta_p)
-                label.append(str(f'f{fm}-{tp}'))
+            label.append(str(f'f{fm}00'))
+
+            z=np.linspace(0,len(I)-1, len(I))
+            scatter = ax.scatter(I,P, s=100, c=z, cmap=cmap, alpha=0.7)
+            plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper right', frameon=False)
 
         # Related atoms
         i_pair=[6,17]
@@ -1014,6 +1064,8 @@ def main():
         p_pair=[5,17]
         p_triple=[6,9,7]
 
+        Igas=[]
+        Pgas=[]
         # READ XYZ STRUCTURES
         for i in range(len(gasphase)):
             coords, atoms = readxyz(gasphase[i])
@@ -1023,8 +1075,8 @@ def main():
             # P-torsion
             teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
 
-            I.append(teta_i)
-            P.append(teta_p)
+            Igas.append(teta_i)
+            Pgas.append(teta_p)
             LabelName=gasphase[i]
             label.append(f"GP-{LabelName[7:13]}")
 
@@ -1032,21 +1084,22 @@ def main():
         #label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GP-MECII', 'GP-MECIP', 'GP-MECIP2']
 
 
-        fig, ax = plt.subplots()
-        cmap = plt.get_cmap('jet', len(label))
-        z=np.linspace(0,len(label)-1, len(label))
-       
-        scatter = ax.scatter(I,P, s=250, c=z, cmap=cmap, alpha=0.9)
         
-        plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper left', frameon=False)
+        
+       
+        
+        
+        #plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper left', frameon=False)
+        ax.plot([200, -200], [-200, 200], ls="--", c=".1", alpha=0.5)
         plt.xlabel("I torsion")
         plt.ylabel("P torsion")
         plt.xlim(-200,200)
         plt.ylim(-200,200) 
 
-      
+        scatter = ax.scatter(Igas,Pgas, s=100, color='red', marker='D')
+ 
         #plt.title("MECI structures")
-        #plt.savefig('meci.png', dpi=300)
+        plt.savefig('meci.svg', dpi=300, format='svg')
 
 
         plt.show(block = True)
