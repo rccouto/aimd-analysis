@@ -1462,9 +1462,6 @@ def main():
         plt.savefig("proteinVSgasphase.png", format='png', dpi=300)
         plt.show()
 
-    if arg.violin == True:
-        # READ THE DCD TRAJECTORY
-
 
 
 if __name__=="__main__":
