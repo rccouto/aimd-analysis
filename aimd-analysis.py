@@ -7,7 +7,7 @@ import numpy as np
 import mdtraj as md
 
 
-def get_tc_results(file):
+def get_tc_md_results(file):
     """ Read output from TeraChem MD calculation and get the CASSCF energy  
     
     Params: 
@@ -35,7 +35,7 @@ def get_tc_results(file):
         if re.search(r"Velocity Verlet integration time step:", i) is not None and ts == 0: 
             words = i.split()
             ts = float(words[5])
-            #ts=1
+            ts=1
            
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
@@ -72,6 +72,38 @@ def get_tc_results(file):
     D=np.array(D).reshape(-1,2)
 
     return ts, S, E, D
+
+def get_tc_sp_results(file):
+    """ Read output from TeraChem MD calculation and get the CASSCF energy  
+    
+    Params: 
+        file - output from Terachem (it works with combined outputs from
+        multiple/restart files, i.e., simple 'cat run01.out run02.out > run-all.out')  
+    
+    Result/Return:
+        E - matrix with CASSCF energies with different roots in columms 
+        D - transition dipole moments 
+    """
+    
+    D=[]
+    E=[]
+    for i in open( file ).readlines():
+                
+        if re.search(r"  singlet   ", i) is not None:
+             words = i.split()
+             e = float(words[2])
+             E.append(e)
+             #print(s)
+
+        elif re.search(r"   1 ->  ", i) is not None:
+             words = i.split()
+             d = float(words[7])
+             D.append(d)
+
+        elif re.search(r"Singlet state velocity transition dipole moments:", i) is not None:
+             break
+
+    return E, D
 
 def compute_rotation(
     xyz,
@@ -226,14 +258,16 @@ def main():
     import sys
     f = optparse.OptionParser()
     # Get Type of Run
-    f.add_option('-e', '--energy' , action="store_true",  default=False, help='Gets the CASSCF energy from TeraChem.')
+    f.add_option('-e', '--energy', type = str, default = None, help='Gets the CASSCF energy from TeraChem.')
+    f.add_option('--dipole', type = str, default = None, help='Dipole moment ') 
     f.add_option('-o', '--out' , type = str, default = "bomd-all.out", help='TeraChem output file.')
-    f.add_option('-a', '--analyze', type = str, default = None, help='Analyze trajectory from Terachem dynamics. Modules available: "hoop" (Pyramidalization angle) \n "rotation" (S-H rotation angle) ') 
+    f.add_option('-a', '--analyze', type = str, default = None, help='Analyze trajectory from Terachem dynamics. Modules available: "hoop" (Pyramidalization angle) \n "rotation" (S-H rotation angle) \n "torsonly" (Save I- P-torsion to file)') 
     f.add_option('--hb' , action="store_true",  default=False, help='Monitor the Hydrogen bonding')
     f.add_option('--plot' , type = str,  default = None, help='Plot with matplotlib.')
     f.add_option('--dist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
-    f.add_option('--spc' , action = "store_true", default = False, help='Extract structures from trajectory for single point calculations.')
+    f.add_option('--spc' , type = str, default = None, help='Extract structures from trajectory for single point calculations. Module: run and get')
+    f.add_option('--spcplot' ,action="store_true",  default=False, help='Extract structures from trajectory for single point calculations. Module: run and get')
     f.add_option('--test' , action="store_true",  default=False, help='For testing purposes')
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrogen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
@@ -249,10 +283,11 @@ def main():
         sys.exit(1)
 
     # GET ENERGY MODULE
-    if arg.energy == True:
+    if arg.energy:
+        import numpy as np
 
         # GET STEP (fs) AND ENERGY (a.u.)
-        st, step, energy = get_tc_results(arg.out)
+        st, step, energy, dipole = get_tc_md_results(arg.energy)
         
         # PLOT RESULS AND SAVE FIGURE
         plt.plot(step, (energy[:,1]-energy[:,0])*27.211385)
@@ -261,6 +296,19 @@ def main():
         plt.title('Energy gap between S0 and S1')
         #plt.ylim(-80,80)
         plt.savefig('energy-gap-s0-s1.png')
+
+        E=[]
+        s0s1gap=(energy[:,1]-energy[:,0])*27.211385
+        len(s0s1gap)
+        for t in range(len(s0s1gap)):
+            if (t % 4) == 0:
+                E.append(s0s1gap[t])
+                E.append(step[t])
+        E=np.array(E).reshape(-1,2)
+        #print(len(E))
+        np.save("s0s1gap.npy", E)
+
+
 
         if arg.plot == "gap":
             plt.show()
@@ -300,6 +348,12 @@ def main():
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
             # LOAD TRAJECTORIE(S)
             topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors.dcd', top = topology)
+
+        elif arg.analyze == 'torsonly':
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            topology = md.load_prmtop('../sphere.prmtop')
             traj = md.load_dcd('coors.dcd', top = topology)
 
         # ON BERZELIUS
@@ -535,6 +589,32 @@ def main():
             #plt.show(block = True)
             plt.close()
 
+        if arg.analyze == "torsonly":
+            """"
+            Save I- P-torsion to file
+            """
+            import matplotlib.cm as cm
+
+            # Compute the I- and P-torsion angles
+            p_torsion=[]
+            i_torsion=[]
+            # Related atoms
+            i_pair=[22,24]
+            i_triple=[21,20,18]
+            p_pair=[22,21]
+            p_triple=[24,27,25]
+
+            for i in range(len(traj)):
+                # I-torsion
+                teta = gp.compute_torsion5(traj.xyz[i,chrome,:],i_pair,i_triple)
+                i_torsion.append(teta)
+                # P-torsion
+                teta = gp.compute_torsion5(traj.xyz[i,chrome,:],p_pair,p_triple)
+                p_torsion.append(teta)
+
+            # Save data to file
+            np.save("i_torsion.npy",np.array(i_torsion))
+            np.save("p_torsion.npy",np.array(p_torsion))
 
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
@@ -795,59 +875,107 @@ def main():
         plt.close()
         #plt.show(block = True)
 
-    if arg.spc == True:
+    if arg.spc:
         """"
         Extract a given molecule from the a QM/MM AIMD trajectory 
         and to perform single point energy calculation with TeraChem. 
         """
         import mdtraj as md
         import numpy as np
-        import socket
+        import socket, glob
         
-        # LOAD TRAJECTORIE(S)
-        topology = md.load_prmtop('sphere.prmtop')
+        if arg.spc == 'run':
+            # LOAD TRAJECTORIE(S)
+            topology = md.load_prmtop('sphere.prmtop')
 
-        # ON MACMINI
-        if socket.gethostname() == "rcc-mac.kemi.kth.se":
-            traj = md.load_dcd('coors.dcd', top = topology)
+            # ON MACMINI
+            if socket.gethostname() == "rcc-mac.kemi.kth.se":
+                traj = md.load_dcd('coors.dcd', top = topology)
+            else:
+            # ON BERZELIUS
+                traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+                traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+                traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+                traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+                traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+                traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+                traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+                traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+                traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+                del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+            # Get the index for the target molecule.
+            #target = traj.topology.select('resname GYC')
+            target = [924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+            # Index of connections to be substituted by H
+            subH=[908,961]
+            mol=np.append(target, subH)
+
+            # Generate XYZ files for each trajectory frame. 
+            for t in range(len(traj)):
+                
+                if (t % 4) == 0:
+                    # File name
+                    xyz = OutName("tfhbdi", "xyz", t)
+                    out=open(xyz, 'w')
+
+                    out.write('{}\n'.format(len(mol)))
+                    out.write('Frame {}\n'.format(t))
+                    for i in range(len(mol)):
+                        # Check if atom is in the H substitution list
+                        if mol[i] in subH:
+                            out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                        else:
+                            out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                    out.close()
+
+        elif arg.spc == 'get':
+            """
+            Get the results from a single point calculation
+            """
+            import numpy as np
+
+            t=[]
+            e=[]
+            d=[]
+            outputs=sorted(glob.iglob('spc-f*.out'))
+            for output in outputs:
+                # GET STEP (fs) AND ENERGY (a.u.)
+                energy, dipole = get_tc_sp_results(output)
+                
+                s1=(energy[1]-energy[0])*27.211385
+                d1=dipole[0]
+
+                time=int(output[5:10])/2
+                t.append(time)
+                e.append(s1)
+                d.append(d1)
+
+            Emd=np.load("s0s1gap.npy")
+            Emd=np.array(Emd).reshape(-1,2)
+
+            for i in range(len(e)):
+                print(t[i], e[i])
+                if i > 0 and e[i] == e[i-1]:
+                    print("Same energy:", e[i], e[i-1])
+
+            plt.plot(t,e, marker='.')
+            plt.plot((Emd[:,1]-1)/2,Emd[:,0], marker='.', color='r')
+            plt.ylabel('Osc.strength (a.u.)')
+            plt.xlabel('Time (fs)')
+            plt.title('S0->S1 Oscillator strength')
+            plt.show()
+                
+            #out=arg.dipole
+            #name=out.replace(".out", "-dipole.png")
+            #plt.savefig(name, format='png', dpi=300)
+
+
         else:
-        # ON BERZELIUS
-            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
-            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
-            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
-            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
-            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
-            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
-            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
-            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+            print("Module | %s | not available in --spc." % arg.spc)
+            sys.exit(1)
 
-            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
-            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
-
-        # Get the index for the target molecule.
-        #target = traj.topology.select('resname GYC')
-        target = [924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
-        # Index of connections to be substituted by H
-        subH=[908,961]
-        mol=np.append(target, subH)
-
-        # Generate XYZ files for each trajectory frame. 
-        for t in range(len(traj)):
-            
-            if (t % 4) == 0:
-                # File name
-                xyz = OutName("tfhbdi", "xyz", t)
-                out=open(xyz, 'w')
-
-                out.write('{}\n'.format(len(mol)))
-                out.write('Frame {}\n'.format(t))
-                for i in range(len(mol)):
-                    # Check if atom is in the H substitution list
-                    if mol[i] in subH:
-                        out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-                    else:
-                        out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-                out.close()
 
     if arg.surr == True:
         import mdtraj as md
@@ -999,7 +1127,7 @@ def main():
         import mdtraj as md 
         import socket
         import numpy as np
-
+        from matplotlib.pyplot import cm
 
          # ON MACMINI    
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
@@ -1013,11 +1141,8 @@ def main():
         # Gas-phase MECI structures
         gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
 
-        #frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
-        #type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
-
-        frame=[20, 27]
-        type=['Imax', 'Imin','Pmax', 'Pmin', 'PImax']
+        frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -1030,33 +1155,31 @@ def main():
 
         # SETUP FIG
         fig, ax = plt.subplots()
-        cmap = plt.get_cmap('jet', len(frame))
-        
-        
+        color = cm.Paired(np.linspace(0, 1, len(frame)))
+
         label=[]
         # READ OPTIMIZED DCD FILES
-        for fm in frame:
+        for fm, c in zip(frame, color):
             I=[]
             P=[]
             for tp in type:
 
                 topology = md.load_prmtop(f'meci-f{fm}-{tp}.prmtop')
                 traj = md.load_dcd(f'meci-f{fm}-{tp}.dcd', top = topology)
-                #traj = md.load_dcd(f'meci-f{fm}-{tp}.rst7', top = topology)
-                #print(len(traj))
                 N=len(traj)-1
                 # I-torsion
-                teta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+                teta_i = gp.compute_torsion5(traj.xyz[N,chrome,:],i_pair,i_triple)
                 # P-torsion
-                teta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+                teta_p = gp.compute_torsion5(traj.xyz[N,chrome,:],p_pair,p_triple)
 
                 I.append(teta_i)
                 P.append(teta_p)
+                print("f%d00 \t %s \t %3.2f \t %3.2f" % (fm, tp, teta_i, teta_p))
             label.append(str(f'f{fm}00'))
 
-            z=np.linspace(0,len(I)-1, len(I))
-            scatter = ax.scatter(I,P, s=100, c=z, cmap=cmap, alpha=0.7)
-            plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper right', frameon=False)
+            scatter = ax.scatter(I,P, s=150, color=c, alpha=0.8)
+
+        plt.legend(label, loc='upper right', frameon=False)
 
         # Related atoms
         i_pair=[6,17]
@@ -1074,22 +1197,11 @@ def main():
             teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
             # P-torsion
             teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
-
             Igas.append(teta_i)
             Pgas.append(teta_p)
             LabelName=gasphase[i]
             label.append(f"GP-{LabelName[7:13]}")
 
-
-        #label=['f2000', 'f3400', 'f5500', 'f6900.21722', 'f6900.837', 'f7600', 'f9000','GP-MECII', 'GP-MECIP', 'GP-MECIP2']
-
-
-        
-        
-       
-        
-        
-        #plt.legend(handles=scatter.legend_elements(num=len(label))[0], labels=label, loc='upper left', frameon=False)
         ax.plot([200, -200], [-200, 200], ls="--", c=".1", alpha=0.5)
         plt.xlabel("I torsion")
         plt.ylabel("P torsion")
@@ -1099,11 +1211,11 @@ def main():
         scatter = ax.scatter(Igas,Pgas, s=100, color='red', marker='D')
  
         #plt.title("MECI structures")
-        plt.savefig('meci.svg', dpi=300, format='svg')
+        #plt.savefig('meci-opt.svg', dpi=300, format='svg')
 
 
         plt.show(block = True)
-        plt.close()
+        #plt.close()
         
     if arg.sim == True:    
         """
@@ -1223,7 +1335,7 @@ def main():
         import matplotlib
 
 
-        for frame in ['2000']: #, '2700', '3400', '4100', '4800', '5500', '6200', '6900', '7600', '8300', '9000']:
+        for frame in ['2000', '2700', '3400', '4100', '4800', '5500', '6200', '6900', '7600', '8300', '9000']:
 
             Itorsion=np.load(f"i_torsion-frame_{frame}.npy")
             Ptorsion=np.load(f"p_torsion-frame_{frame}.npy")
@@ -1232,19 +1344,29 @@ def main():
             
             Imax=np.nanmax(Itorsion)
             Imin=np.nanmin(Itorsion)
+            I=[]
+            P=[]
             for  count, t in enumerate(Itorsion):
                 if t == Imax:
                     print("Itorsion max", count, t)
+                    I.append(Itorsion[count])
+                    P.append(Ptorsion[count])
                 elif t == Imin:
                     print("Itorsion min", count, t)
+                    I.append(Itorsion[count])
+                    P.append(Ptorsion[count])
 
             Pmax=np.nanmax(Ptorsion)
             Pmin=np.nanmin(Ptorsion)
             for  count, t in enumerate(Ptorsion):
                 if t == Pmax:
                     print("Ptorsion max", count, t)
+                    I.append(Itorsion[count])
+                    P.append(Ptorsion[count])
                 elif t == Pmin:
                     print("Ptorsion min", count, t)
+                    I.append(Itorsion[count])
+                    P.append(Ptorsion[count])
 
 
             PImax=np.nanmax(abs(Itorsion)+abs(Ptorsion))
@@ -1253,25 +1375,95 @@ def main():
                     print("PItorsion max", count, t)
                     print("Itorsion", Itorsion[count])
                     print("Ptorsion", Ptorsion[count])
+                    I.append(Itorsion[count])
+                    P.append(Ptorsion[count])
         #print(PImax)
         #plt.plot(abs(Itorsion)+abs(Ptorsion))
         #plt.show()
 
-    if arg.test == True:
+            t=np.linspace(0, len(Itorsion)-1, len(Itorsion))*0.5
+            alphas=np.linspace(1, 1, len(Itorsion))
+            size=np.linspace(50, 50, len(Itorsion))
 
-        #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
+
+            # PLOT PROPAGATION
+            plt.scatter(Itorsion,Ptorsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
+            # PLOT THE EXTREMES
+            plt.scatter(I,P, c="red", s=80, marker='D')
+            
+            plt.ylabel('P-torsion')
+            plt.xlabel('I-torsion')
+            plt.xlim(-80,80)
+            plt.ylim(-80,80) 
+            plt.title('P-I-Torsion')
+            cbar=plt.colorbar(values=t)
+            cbar.set_label('Time (fs)')
+            plt.savefig(f'i-p-torsion-2d-f{frame}.png', dpi=300)
+            plt.close()
+            #plt.show()
+
+    if arg.dipole:
+        import matplotlib
+        import numpy as np
+
+        # GET STEP (fs) AND ENERGY (a.u.)
+        st, step, energy, dipole = get_tc_md_results(arg.dipole)
+        
+        s1=(energy[:,1]-energy[:,0])*27.211385
+        d1=dipole[:,0]
+
+        time=np.linspace(0,len(s1)-1,len(s1))/2
+
+
+        plt.plot(time,d1)
+        plt.ylabel('Osc.strength (a.u.)')
+        plt.xlabel('Time (fs)')
+        plt.title('S0->S1 Oscillator strength')
+        #plt.show()
+        
+        out=arg.dipole
+        name=out.replace(".out", "-dipole.png")
+        plt.savefig(name, format='png', dpi=300)
+
+
+    if arg.spcplot == True:
         import hbond as hb
         import mdtraj as md 
         import numpy as np
         import matplotlib
 
-        topology = md.load_prmtop('sphere.prmtop')
-        traj = md.load_dcd('coors.dcd', top = topology)
-        
-        frame0=traj[0]
-        frame0.save_dcd('frame0.dcd')
-        #print(traj[1])
+        Emd=np.load("s0s1gap.npy")
+        Emd=np.array(Emd).reshape(-1,2)
 
+        Esp=[]
+        with open("energies5.dat", 'r') as f_in:
+            for line in f_in.readlines():
+                T, E = line.split()
+                Esp.append(float(E))
+        
+        time=np.linspace(0,len(Esp)-1, len(Esp))*2
+
+        D=[]
+        for i in range(len(Esp)):
+            D.append(Esp[i]-Emd[i,0])
+            #print(time[i], Esp[i])
+
+
+        fig, ax = plt.subplots(1, 1)
+        fig.set_figheight(5)
+        fig.set_figwidth(22)
+
+        #plt.plot(time,Esp, marker='.')
+        #plt.plot((Emd[:,1]-1)/2,Emd[:,0], marker='.', color='r')
+        plt.plot(time,D, color='r')
+        plt.ylabel('$\Delta$E Protein/gas-phase (eV)  ')
+        plt.xlabel('Time (fs)')
+        #plt.title('S0->S1 Oscillator strength')
+        plt.savefig("proteinVSgasphase.png", format='png', dpi=300)
+        plt.show()
+
+    if arg.violin == True:
+        # READ THE DCD TRAJECTORY
 
 
 
