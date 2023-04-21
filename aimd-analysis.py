@@ -343,6 +343,7 @@ def main():
         import mdtraj as md
         import numpy as np
         import socket
+        import matplotlib.pyplot as plt
 
         # ON MACMINI    
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
