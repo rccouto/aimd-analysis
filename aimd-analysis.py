@@ -350,13 +350,13 @@ def main():
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
             # LOAD TRAJECTORIE(S)
             topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors-all.dcd', top = topology)
+            traj = md.load_dcd('coors.dcd', top = topology)
 
         elif arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('../sphere.prmtop')
-            traj = md.load_dcd('coors.dcd', top = topology)
+            traj = md.load_dcd('coors-all.dcd', top = topology)
 
         # ON BERZELIUS
         else:
