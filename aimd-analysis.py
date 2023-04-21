@@ -276,6 +276,7 @@ def main():
     f.add_option('--meci' , action="store_true",  default=None, help='MECI analysis')
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
+    f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -615,6 +616,51 @@ def main():
             # Save data to file
             np.save("i_torsion.npy",np.array(i_torsion))
             np.save("p_torsion.npy",np.array(p_torsion))
+
+            # Time 
+            t=np.linspace(0, len(i_torsion)-1, len(i_torsion))*0.5
+
+            #  Plot I-torsion
+            plt.plot(t,i_torsion)
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.ylim(-80,80)
+            plt.title('I Dihedral angle')
+            plt.savefig('I_dihedral.png')
+            plt.close()
+
+            #  Plot P-torsion
+            plt.plot(t,p_torsion)
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.title('P Dihedral angle')
+            plt.ylim(-80,80)
+            plt.savefig('P_dihedral.png')
+            plt.close()
+
+            #  Plot I- and P-torsion together
+            plt.plot(t,i_torsion, label="P-torsion")
+            plt.plot(t,p_torsion, label="I-torsion")
+            plt.ylabel('Dihedral angle (deg)')
+            plt.xlabel('Time (fs)')
+            plt.title('P- and I- Dihedral angle')
+            plt.ylim(-80,80)
+            plt.legend()
+            plt.savefig('P-I_dihedral.png')
+            plt.close()
+
+            alphas=np.linspace(1, 1, len(i_torsion))
+            size=np.linspace(50, 50, len(i_torsion))
+            plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
+            plt.ylabel('P-torsion')
+            plt.xlabel('I-torsion')
+            plt.xlim(-80,80)
+            plt.ylim(-80,80) 
+            plt.title('P-I-Torsion')
+            cbar=plt.colorbar(values=t)
+            cbar.set_label('Time (fs)')
+            plt.savefig('P-I_dihedral-2D.png')
+            plt.close()
 
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
@@ -1462,6 +1508,76 @@ def main():
         plt.savefig("proteinVSgasphase.png", format='png', dpi=300)
         plt.show()
 
+
+    if arg.violin == True:
+        from matplotlib.ticker import MultipleLocator
+        import matplotlib.pyplot as plt
+        import numpy as np
+    
+        clr = 'r',
+        edgeclr = 'darkred'
+
+        # Conversions
+        au_to_ps = 2.418884254E-5
+        au_to_eV = 27.2114
+
+        windows = np.arange(-100, 100+1, 10)
+        windows = ['P' + str(w) for w in windows]
+
+
+        for w in windows:
+            Idihedrals = np.load('i_torsion_{}.npy'.format(w))
+            Pdihedrals = np.load('p_torsion_{}.npy'.format(w))
+
+            Idihedrals=np.nan_to_num(Idihedrals)
+            Pdihedrals=np.nan_to_num(Pdihedrals)
+
+            
+            #if w == 'P-100':
+            #    for i in range(len(Pdihedrals)):
+            #        print(Pdihedrals[i])
+
+            plt.figure(0)
+            plt.axhline([0.0], ls='--', color='gray', alpha=0.8, zorder=0)
+
+            xpos = int(w[1:])
+            parts = plt.violinplot(Pdihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
+            #for partname in ('cbars','cmins','cmaxes','cmedians'):
+            
+            for partname in ['cmedians']:
+                vp = parts[partname]
+                vp.set_edgecolor('black')
+                vp.set_linewidth(1.5)
+            for pc in parts['bodies']:
+                pc.set_facecolor(clr)
+                pc.set_alpha(0.8)
+                pc.set_linewidth(1.5)
+                #pc.set_edgecolor(edgeclr)
+                pc.set_edgecolor('k')
+
+        plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
+        plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+        plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
+        plt.yticks(np.arange(-120, 120+1, 20), fontsize=14)
+        plt.xlim([-110, 110])
+        plt.ylim([-110, 110])
+        #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
+        #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
+        plt.tight_layout()
+        plt.show()
+        #plt.savefig('violin.png', dpi=400)
+
+
+    if arg.test == True:
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+
+        Idihedrals = np.load('i_torsion_I-100.npy')
+        Pdihedrals = np.load('p_torsion_I-100.npy')
+
+        plt.plot(Pdihedrals)
+        plt.show()
 
 
 if __name__=="__main__":
