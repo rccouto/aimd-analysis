@@ -658,6 +658,10 @@ def main():
             plt.savefig('P-I_dihedral-2D.png')
             plt.close()
 
+            # Save last frame of trajectory
+            LastFrame=traj[-1]
+            LastFrame.save_amberrst7('LastFrame.rst7')
+
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
             sys.exit(1)
@@ -1513,13 +1517,21 @@ def main():
         clr = 'r',
         edgeclr = 'darkred'
 
+        # Sampled torsion
+        X="P"
+        # Other axis
+        Y="P"
+
         # Conversions
         au_to_ps = 2.418884254E-5
         au_to_eV = 27.2114
 
         windows = np.arange(-100, 100+1, 10)
-        windows = ['P' + str(w) for w in windows]
 
+        if X == "I":
+            windows = ['I' + str(w) for w in windows]
+        else:
+            windows = ['P' + str(w) for w in windows]
 
         for w in windows:
             Idihedrals = np.load('i_torsion_{}.npy'.format(w))
@@ -1537,7 +1549,11 @@ def main():
             plt.axhline([0.0], ls='--', color='gray', alpha=0.8, zorder=0)
 
             xpos = int(w[1:])
-            parts = plt.violinplot(Pdihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
+
+            if Y == "I":
+                parts = plt.violinplot(Idihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
+            else:
+                parts = plt.violinplot(Pdihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
             #for partname in ('cbars','cmins','cmaxes','cmedians'):
             
             for partname in ['cmedians']:
@@ -1551,18 +1567,27 @@ def main():
                 #pc.set_edgecolor(edgeclr)
                 pc.set_edgecolor('k')
 
-        plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
-        plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+        if X == "I":
+            plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
+        else:
+            plt.xlabel('$\phi_P$ window (degrees)', fontsize=16)
+        
+        if Y == "I":
+            plt.ylabel('$\phi_I$ samples (degrees)', fontsize=16)
+        else:
+            plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+        
         plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
-        plt.yticks(np.arange(-120, 120+1, 20), fontsize=14)
+        plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
         plt.xlim([-110, 110])
-        plt.ylim([-110, 110])
+        plt.ylim([-180, 180])
         #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
         #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
         plt.tight_layout()
+        
+        plt.savefig('violin.png', dpi=400)
+        
         plt.show()
-        #plt.savefig('violin.png', dpi=400)
-
 
     if arg.test == True:
         import matplotlib.pyplot as plt
