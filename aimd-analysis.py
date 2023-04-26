@@ -271,8 +271,7 @@ def main():
     f.add_option('--test' , action="store_true",  default=False, help='For testing purposes')
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrogen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
-    f.add_option('--with2o' , action="store_false",  default=True, help='Do not exclude water in the HB analysis.')
-    f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ')
+    f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ') 
     f.add_option('--meci' , action="store_true",  default=None, help='MECI analysis')
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
@@ -759,6 +758,7 @@ def main():
         import socket
         import matplotlib
         import matplotlib.colors
+        import matplotlib.pyplot as plt
         from matplotlib.lines import Line2D
 
         #################
@@ -791,10 +791,13 @@ def main():
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
             print('-- DONE --')
+
         # SET UP THE ARRAY FOR THE HB COUNT
         hb_size=100
         hb_hydrogen_count = np.zeros([(len(traj)), hb_size])
+        hb_hydrogen_resname = np.empty([(len(traj)), hb_size], dtype = 'S10')
         hb_recept_count = np.zeros([(len(traj)), hb_size])
+        hb_recept_resname = np.empty([(len(traj)), hb_size], dtype = 'S10')
 
         # SAVE INFO FILES 
         out = open("hydrogen-bonding.dat", 'w')
@@ -802,8 +805,8 @@ def main():
         out2.write("# t (fs) / N_HB /  RES  /  H   / CHROME\n")
 
         print('-- Computing HBs')
-        # IDENTIFY THE HB WITH wernet_nilsson METHOD FROM MDTRAJ
-        hbond = hb.wernet_nilsson(traj, target, exclude_water=arg.with2o)
+        # IDENTIFY THE HB WITH MODIFIED wernet_nilsson METHOD FROM MDTRAJ
+        hbond = hb.wernet_nilsson(traj, target, exclude_water=False)
         print('-- DONE --')
 
         # SET UP ARRAYS AND SETS
@@ -812,18 +815,17 @@ def main():
         try_set=set()
         hb_recept=[]
         try_set_recept=set()
-        max_n=0
 
         # LOOP OF THE TRAJECTORY FRAMES
         for i in range(len(traj)):
             out.write("HBs \n")
             nhb = 0
-            # LOOP OVER THE IDENTIFIED HYDROGEN BONDS
+            # LOOP OVER THE HYDROGEN BONDS LIST
             for hb in hbond[i]:
                 # ONLY HB INVOLVING THE TARGET GYC60
                 if str(traj.topology.atom(hb[2]).residue) == target or  str(traj.topology.atom(hb[0]).residue) == target:
                                         
-                    # USE SET TO IDENTIFY UNIQUE HB RESIDUES-HYDROIGEN AND APPEND TO ARRAY
+                    # USE SET TO IDENTIFY UNIQUE HB RESIDUES-HYDROGEN AND APPEND TO ARRAY
                     if traj.topology.atom(hb[1]) not in try_set:
                         try_set.add(traj.topology.atom(hb[1]))
                         hb_res_h.append(str(traj.topology.atom(hb[1])))
@@ -832,7 +834,8 @@ def main():
                     for j in range(len(hb_res_h)):
                         # IF RESIDUE ON THE LIST
                         if str(traj.topology.atom(hb[1])) == str(hb_res_h[j]):    
-                            hb_hydrogen_count[i][j]+=10
+                            hb_hydrogen_count[i][j]+=1
+                            hb_hydrogen_resname[i][j]=str(traj.topology.atom(hb[1]))
                             out.write("%d  %s -- %s -- %s \n" % (hb_hydrogen_count[i][j], traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
                             break
                     # HB COUNTER
@@ -847,7 +850,8 @@ def main():
                     for j in range(len(hb_recept)):
                         # IF residue in the list
                         if str(traj.topology.atom(hb[2])) == str(hb_recept[j]):    
-                            hb_recept_count[i][j]+=10
+                            hb_recept_count[i][j]+=1
+                            hb_recept_resname[i][j]=str(traj.topology.atom(hb[2]))
                             break 
 
                     # WRITE TO FILE
@@ -857,7 +861,7 @@ def main():
         out.close()
         out2.close()
 
-        # SET UP FIGURE SPECS
+        # SETUP FIGURE SPECS
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 1]})
         fig.tight_layout()
         fig.set_figheight(8)
@@ -883,15 +887,66 @@ def main():
         X,Y=np.meshgrid(t,r)
         Z=np.transpose(hb_hydrogen_count)
         
+        #PLOT THE HB WHILE GROUPING SAME RESIDUES
+        #cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
+        #ax2.set_yticks(r, list(hb_res_h))
+        #ax2.set_ylim(-1, len(hb_res_h)+0.4)
+        #ax2.set_ylabel("Residue-Hydrogen of the HB")
+        #ax2.set_xlabel("Time (fs)")
+        #ax2.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
+
+        # SPLIT THE LABELS
+        HbH=[]
+        for i in range(len(Z)): 
+            maxHB=np.max(Z[i,:])
+            #print(i, Z[i,:])
+            for j in range(int(maxHB)):
+                HbH.append(hb_res_h[i])
+        
+        # SPLIT THE HB COUNT
+        HbHCount=[]
+        HbHCount=np.zeros([len(HbH),len(traj)])
+        
+        RowCount=0
+        # LOOP OVER NUMBER GROUPED HB RECEPTORS 
+        for i in range(len(Z)): 
+            maxHB=int(np.max(Z[i,:]))
+            # LOOP OVER TIME
+            for j in range(len(Z[1,:])):
+                # LOOP NUMBER OF HB 
+                for k in range(int(Z[i,j])):
+                    HbHCount[RowCount+k][j]=10
+            RowCount += maxHB
+        
+        # SET UP THE DATA
+        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        r=np.linspace(0, len(HbH)-1, len(HbH))
+        X,Y=np.meshgrid(t,r)
+        Z=HbHCount
+
+        # COLOR GROUPING
+        colors=[]
+        resCount=0
+        residue='nothing'
+        for res in HbH:
+            if res == residue:
+                colors.append(np.full((1, len(hbond)), resCount))
+            else:
+                resCount += 1
+                colors.append(np.full((1, len(hbond)), resCount))
+            residue=res
+
         #PLOT 
         cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
-        ax2.set_yticks(r, list(hb_res_h))
-        ax2.set_ylim(-1, len(hb_res_h)+0.4)
+        ax2.set_yticks(r, list(HbH))
+        ax2.set_ylim(-1, len(HbH)+0.4)
         ax2.set_ylabel("Residue-Hydrogen of the HB")
         ax2.set_xlabel("Time (fs)")
-        ax2.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
-        
+        ax2.scatter(X,Y,Z,c=colors, cmap='gist_rainbow', marker="o", alpha=1)
+
+
         ### PLOT THE HB RECEPTOR 
+
         # RESIZE THE hb_recept_count ARRAY TO hb_recept
         hb_recept_count=np.array(hb_recept_count, order='F')
         hb_recept_count.resize(len(traj), len(hb_recept))
@@ -902,24 +957,82 @@ def main():
         X,Y=np.meshgrid(t,r)
         Z=np.transpose(hb_recept_count)
 
-        #PLOT 
-        cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
-        legend_elements = [ Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', label='1 HB'),
-                            Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='2 HBs'),
-                            Line2D([0], [0], marker='o', color='w', markerfacecolor='green',label='3 HBs'),
-                            Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow',label='4 HBs')]
+        #PLOT GROUPED
+        #cmap = matplotlib.colors.ListedColormap(['blue','red','green'])
+        #cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
+        #legend_elements = [ Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', label='1 HB'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='2 HBs'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='green',label='3 HBs'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow',label='4 HBs')]
 
-        ax3.set_yticks(r, list(hb_recept))
-        ax3.legend(handles=legend_elements, ncol=4, loc="upper left")
+        #ax3.set_yticks(r, list(hb_recept))
+        #ax3.legend(handles=legend_elements, ncol=4, loc="upper left")
+        #ax3.set_ylabel("HB receptor")
+        #ax3.set_xlabel("Time (fs)")
+        #ax3.set_ylim(-1, len(hb_recept)+0.6)
+        #ax3.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
+        
+        # SPLIT THE LABELS
+        HbRec=[]
+        for i in range(len(Z)): 
+            maxHB=np.max(Z[i,:])
+            #print(i, Z[i,:])
+            for j in range(int(maxHB)):
+                HbRec.append(hb_recept[i])
+        
+        # SPLIT THE HB COUNT
+        HbRecCount=[]
+        HbRecCount=np.zeros([len(HbRec),len(traj)])
+
+        RowCount=0
+        # LOOP OVER NUMBER GROUPED HB RECEPTORS 
+        for i in range(len(Z)): 
+            maxHB=int(np.max(Z[i,:]))
+            # LOOP OVER TIME
+            for j in range(len(Z[1,:])):
+                # LOOP NUMBER OF HB 
+                for k in range(int(Z[i,j])):
+                    HbRecCount[RowCount+k][j]=10
+            RowCount += maxHB
+        
+        # SET UP THE DATA
+        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        r=np.linspace(0, len(HbRec)-1, len(HbRec))
+        X,Y=np.meshgrid(t,r)
+        Z=HbRecCount
+
+        # COLOR GROUPING
+        colors=[]
+        resCount=0
+        residue='nothing'
+        for res in HbRec:
+            if res == residue:
+                colors.append(np.full((1, len(hbond)), resCount))
+            else:
+                resCount += 1
+                colors.append(np.full((1, len(hbond)), resCount))
+            residue=res
+
+        #PLOT
+        #cmap = matplotlib.colors.ListedColormap(['blue','red','green'])
+        #cmap = matplotlib.colors.ListedColormap(['#000000','blue','red','green', 'yellow'])
+        #legend_elements = [ Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', label='1 HB'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='2 HBs'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='green',label='3 HBs'),
+        #                    Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow',label='4 HBs')]
+
+        ax3.set_yticks(r, list(HbRec))
+        #ax3.legend(handles=legend_elements, ncol=4, loc="upper left")
         ax3.set_ylabel("HB receptor")
         ax3.set_xlabel("Time (fs)")
-        ax3.set_ylim(-1, len(hb_recept)+0.6)
-        ax3.scatter(X,Y,Z,c=Z, cmap=cmap, marker="o", alpha=1)
+        ax3.set_ylim(-1, len(HbRec)+0.6)
+        ax3.scatter(X,Y,Z,c=colors, cmap='gist_rainbow', marker="o", alpha=1)
         
         # SAVE FIGURE AND EXIT
         plt.savefig('hb.png')
-        plt.close()
         #plt.show(block = True)
+        plt.close()
+        
 
     if arg.spc:
         """"
@@ -1064,6 +1177,7 @@ def main():
         import mdtraj as md 
         import socket
         import numpy as np
+        import matplotlib.pyplot as plt
 
 
          # ON MACMINI    
@@ -1164,7 +1278,7 @@ def main():
             plt.savefig('init-struct.png', dpi=300)
         elif arg.minima == "ls1d":
             plt.title("S1 minimum from lowest energy in dynamics")
-            plt.savefig('mim-dynam-struct.png', dpi=300)
+            #plt.savefig('mim-dynam-struct.png', dpi=300)
 
         plt.show(block = True)
         plt.close()
