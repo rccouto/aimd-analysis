@@ -272,7 +272,8 @@ def main():
     f.add_option('--h2o' , action="store_true",  default=False, help='For H20 hydrogen bonding only.')
     f.add_option('--surr' , action="store_true",  default=False, help='Gives a list with the close residues to the target in the whole trajectory.')
     f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ') 
-    f.add_option('--meci' , action="store_true",  default=None, help='MECI analysis')
+    f.add_option('--meci' ,  type=int,  default=None, help='MECI analysis')
+    f.add_option('--meci2' ,  type=str,  default=None, help='MECI analysis - all .dcd files in the folder')
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
@@ -862,9 +863,9 @@ def main():
         out2.close()
 
         # SETUP FIGURE SPECS
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 1]})
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 2]})
         fig.tight_layout()
-        fig.set_figheight(8)
+        fig.set_figheight(12)
         fig.set_figwidth(18)
         plt.subplots_adjust(hspace=0)
 
@@ -1287,7 +1288,9 @@ def main():
         import mdtraj as md 
         import socket
         import numpy as np
+        import matplotlib.pyplot as plt
         from matplotlib.pyplot import cm
+        from matplotlib.lines import Line2D
 
          # ON MACMINI    
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
@@ -1298,10 +1301,18 @@ def main():
         import geom_param as gp
 
 
+        ## PLOT TYPE
+        #TYPE="pyr"
+        TYPE="ics"
+
         # Gas-phase MECI structures
         gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
 
-        frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        #frame=[20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90]
+        
+        frame=[arg.meci]
+        
+
         type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
@@ -1313,16 +1324,25 @@ def main():
         p_pair=[22,21]
         p_triple=[24,27,25]
 
+        # PYRAMIDALIZATION INDEXES  
+        pyr_idx= [22,23,24,21]
+
         # SETUP FIG
         fig, ax = plt.subplots()
-        color = cm.Paired(np.linspace(0, 1, len(frame)))
+        # COLORS
+        if TYPE == "ics":
+            color = cm.Paired(np.linspace(0, 1, len(type)))
+            markers=['o', 's', '^', '*', 'D']
+        else:
+            color = cm.Paired(np.linspace(0, 1, len(frame)))
 
         label=[]
         # READ OPTIMIZED DCD FILES
         for fm, c in zip(frame, color):
             I=[]
             P=[]
-            for tp in type:
+            PYR=[]
+            for tp, c2, mk in zip(type, color, markers):
 
                 topology = md.load_prmtop(f'meci-f{fm}-{tp}.prmtop')
                 traj = md.load_dcd(f'meci-f{fm}-{tp}.dcd', top = topology)
@@ -1331,15 +1351,50 @@ def main():
                 teta_i = gp.compute_torsion5(traj.xyz[N,chrome,:],i_pair,i_triple)
                 # P-torsion
                 teta_p = gp.compute_torsion5(traj.xyz[N,chrome,:],p_pair,p_triple)
-
+                # Pyramizadlization
+                teta_pyr = gp.compute_pyramidalization(traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+                
                 I.append(teta_i)
                 P.append(teta_p)
-                print("f%d00 \t %s \t %3.2f \t %3.2f" % (fm, tp, teta_i, teta_p))
+                PYR.append(teta_pyr)
+
+                if TYPE == "ics":
+                    # Initial geometry
+                    Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+                    Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+                    Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+                    
+                    scatter = ax.scatter(Iteta_i,Iteta_p, s=150, c=Iteta_pyr, cmap='coolwarm', alpha=0.7, edgecolors='black', marker=mk, linewidths=1, vmin=-40, vmax=40)
+
+                    # Final geometry
+                    scatter = ax.scatter(teta_i,teta_p, s=150,  c=teta_pyr, cmap='coolwarm', alpha=0.7, marker=mk, vmin=-40, vmax=40)
+
+                    # Connecting line
+                    ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="-", c=".1", alpha=0.5)
+                    #plt.arrow(x=Iteta_i, y=Iteta_p, dx=(teta_i-Iteta_i), dy=(teta_p-Iteta_p), width=0.8,facecolor='black', edgecolor='none')
+
+                #print("f%d00 \t %s \t %3.2f \t %3.2f" % (fm, tp, teta_i, teta_p))
             label.append(str(f'f{fm}00'))
 
-            scatter = ax.scatter(I,P, s=150, color=c, alpha=0.8)
+            if TYPE == "pyr":
+                scatter = ax.scatter(I,P, s=150, c=PYR, cmap='coolwarm', alpha=0.8, vmin=-40, vmax=40)
+           
+        if TYPE == "ics":
+            cmap = plt.cm.coolwarm
+            legend_elements = [Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[0], marker=markers[0], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[1], marker=markers[1], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[2], marker=markers[2], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[3], marker=markers[3], markersize=15),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[4], marker=markers[4], markersize=10),
+                            Line2D([0], [0], color='w', markeredgecolor='black', markerfacecolor='w', label='Init. geom.', marker='s', markersize=10)
+                            ]
+            plt.legend(handles=legend_elements, frameon=False)
+            #plt.legend(hanfles=markers, loc='upper right', frameon=False)
+            plt.title(f"IC f{fm}00")
 
-        plt.legend(label, loc='upper right', frameon=False)
+        
+        cbar=plt.colorbar(scatter)
+        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
 
         # Related atoms
         i_pair=[6,17]
@@ -1363,20 +1418,149 @@ def main():
             label.append(f"GP-{LabelName[7:13]}")
 
         ax.plot([200, -200], [-200, 200], ls="--", c=".1", alpha=0.5)
-        plt.xlabel("I torsion")
-        plt.ylabel("P torsion")
-        plt.xlim(-200,200)
-        plt.ylim(-200,200) 
+        plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
+        plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
+        
+        if TYPE == "ics":
+            plt.xlim(-80,90)
+            plt.ylim(-100,80)
+        else:
+            plt.xlim(-120,120)
+            plt.ylim(-120,120)
 
         scatter = ax.scatter(Igas,Pgas, s=100, color='red', marker='D')
- 
+        
         #plt.title("MECI structures")
         #plt.savefig('meci-opt.svg', dpi=300, format='svg')
 
-
-        plt.show(block = True)
+        if TYPE == "ics":
+            out=f"meci-opt-f{fm}00-init.png"
+            plt.savefig(out, dpi=300, format='png')
+        
+        #plt.show(block = True)
         #plt.close()
         
+
+    if arg.meci2:
+        import mdtraj as md 
+        import socket, glob
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.pyplot import cm
+        from matplotlib.lines import Line2D
+
+         # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+        import geom_param as gp
+
+        if arg.meci2 == 's1':
+            gasphase=['TFHBDI-S1I2-acas.xyz', 'TFHBDI-S1planar-trans-acas.xyz', 'TFHBDI-S1P-acas.xyz', 'TFHBDI-S1I-acas.xyz', 'TFHBDI-S1planar-acas.xyz']
+        else:
+            # Gas-phase MECI structures
+            gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+
+        # PYRAMIDALIZATION INDEXES  
+        pyr_idx= [22,23,24,21]
+
+        # SETUP FIG
+        fig, ax = plt.subplots()
+        
+        files=sorted(glob.iglob('meci-f27-*.dcd'))
+        # COLORS
+        color = cm.Paired(np.linspace(0, 1, len(files)))
+        
+        label=[]
+        I=[]
+        P=[]
+        PYR=[]
+        for file, c in zip(files, color):
+
+            
+            prmtop=file.replace(".dcd", ".prmtop")
+
+            topology = md.load_prmtop(prmtop)
+            traj = md.load_dcd(file, top = topology)
+            N=len(traj)-1
+            # I-torsion
+            teta_i = gp.compute_torsion5(traj.xyz[N,chrome,:],i_pair,i_triple)
+            # P-torsion
+            teta_p = gp.compute_torsion5(traj.xyz[N,chrome,:],p_pair,p_triple)
+            # Pyramizadlization
+            teta_pyr = gp.compute_pyramidalization(traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+                
+            I.append(teta_i)
+            P.append(teta_p)
+            PYR.append(teta_pyr)
+
+            # Initial geometry
+            Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+            Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+            Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
+            #scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
+
+            # Final geometry
+            scatter = ax.scatter(teta_i,teta_p, s=50,  c=teta_pyr, cmap='coolwarm', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
+            # Connecting line
+            #ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
+
+
+
+        #scatter = ax.scatter(I,P, s=150, c=PYR, cmap='coolwarm', alpha=0.8, vmin=-40, vmax=40)
+           
+        
+        cbar=plt.colorbar(scatter)
+        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+
+        # Related atoms
+        i_pair=[6,17]
+        i_triple=[5,3,1]
+        p_pair=[5,17]
+        p_triple=[6,9,7]
+
+        Igas=[]
+        Pgas=[]
+        # READ XYZ STRUCTURES
+        for i in range(len(gasphase)):
+            coords, atoms = readxyz(gasphase[i])
+            # I-torsion
+            teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
+            # P-torsion
+            teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
+            Igas.append(teta_i)
+            Pgas.append(teta_p)
+            LabelName=gasphase[i]
+            label.append(f"GP-{LabelName[7:13]}")
+        ax.plot([200, -200], [-200, 200], ls="-", c=".1", alpha=0.5)
+        plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
+        plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
+        
+
+        plt.xlim(-120,120)
+        plt.ylim(-120,120)
+
+        scatter = ax.scatter(Igas,Pgas, s=70, color='red', marker='D')
+        
+        #plt.title("MECI structures")
+        plt.savefig('meci-f27-opt.png', dpi=300, format='png')
+
+        #plt.show(block = True)
+        #plt.close()
+
+    
     if arg.sim == True:    
         """
         Similaritites module
