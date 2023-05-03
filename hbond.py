@@ -27,9 +27,11 @@
 
 from __future__ import print_function, division
 import numpy as np
+import mdtraj as md
 from mdtraj.utils import ensure_type
 from mdtraj.geometry import compute_distances, compute_angles
 from mdtraj.geometry import _geometry
+
 
 __all__ = ['wernet_nilsson', 'baker_hubbard', 'kabsch_sander']
 
@@ -123,9 +125,16 @@ def wernet_nilsson(traj, target, exclude_water=True, periodic=True, sidechain_on
         raise ValueError('wernet_nilsson requires that traj contain topology '
                          'information')
 
+    
+    # Get the target surroundings
+    SELEC=f'resname {target[0:3]}'
+    chrome = traj.topology.select(SELEC)
+    sur_resname = compute_neighbours(traj,chrome, 0.5, True)
+
     # Get the possible donor-hydrogen...acceptor triplets
-    bond_triplets = _get_bond_triplets(traj.topology, target,
+    bond_triplets = _get_bond_triplets(traj.topology, sur_resname,
         exclude_water=exclude_water, sidechain_only=sidechain_only)
+    print("SIZE BOND_TRIPLETS", len(bond_triplets))
 
     # Compute geometry
     mask, distances, angles = _compute_bounded_geometry(traj, bond_triplets,
@@ -143,16 +152,19 @@ def wernet_nilsson(traj, target, exclude_water=True, periodic=True, sidechain_on
     return [bond_triplets.compress(present, axis=0) for present in presence]
 
 
-def _get_bond_triplets(topology, target, exclude_water=True, sidechain_only=False):
+def _get_bond_triplets(topology, sur_resname, exclude_water=True, sidechain_only=False):
 
-    def can_participate(atom, target):
+    def can_participate(atom, sur_resname):
+
         # Filter waters
         if exclude_water and atom.residue.is_water:
             return False
         # Filter non-sidechain atoms
         if sidechain_only and not atom.is_sidechain:
             return False
-        if target and str(atom.residue) != str(target):
+        # Filter residues is not the target acceptor
+        #if target and str(atom.residue) != str(target):
+        if sur_resname and str(atom.residue) not in sur_resname:
             return False
         # Otherwise, accept it
         return True
@@ -165,7 +177,7 @@ def _get_bond_triplets(topology, target, exclude_water=True, sidechain_only=Fals
 
         # Filter non-participating atoms
         atoms = [atom for atom in atoms
-            if can_participate(atom[0], None) and can_participate(atom[1], None)]
+            if can_participate(atom[0], sur_resname) and can_participate(atom[1], sur_resname)]
 
         # Get indices for the remaining atoms
         indices = []
@@ -200,8 +212,9 @@ def _get_bond_triplets(topology, target, exclude_water=True, sidechain_only=Fals
 
     acceptor_elements = frozenset(('O', 'N'))
     acceptors = [a.index for a in topology.atoms
-        if a.element.symbol in acceptor_elements and can_participate(a, target)]
-
+        if a.element.symbol in acceptor_elements and can_participate(a, sur_resname)]
+    
+    
     # Make acceptors a 2-D numpy array
     acceptors = np.array(acceptors)[:, np.newaxis]
 
@@ -253,6 +266,18 @@ def _compute_bounded_geometry(traj, triplets, distance_cutoff, distance_indices,
 
     return mask, distances, angles
 
+def compute_neighbours (pdb, query_idxs, cutoff, water):
+  """
+  Determine which residues are within cutoff of query indices
+  """
+  neighbour_resnames=set()
+  neighbour_atoms = md.compute_neighbors(pdb, cutoff, query_idxs)
+
+  for atom_idx in neighbour_atoms[0]:
+    resname =  pdb.topology.atom(atom_idx).residue
+    neighbour_resnames.add(str(resname))
+
+  return list(neighbour_resnames)
 
 def _get_or_minus1(f):
     try:
