@@ -134,7 +134,6 @@ def wernet_nilsson(traj, target, exclude_water=True, periodic=True, sidechain_on
     # Get the possible donor-hydrogen...acceptor triplets
     bond_triplets = _get_bond_triplets(traj.topology, sur_resname,
         exclude_water=exclude_water, sidechain_only=sidechain_only)
-    print("SIZE BOND_TRIPLETS", len(bond_triplets))
 
     # Compute geometry
     mask, distances, angles = _compute_bounded_geometry(traj, bond_triplets,
@@ -162,8 +161,7 @@ def _get_bond_triplets(topology, sur_resname, exclude_water=True, sidechain_only
         # Filter non-sidechain atoms
         if sidechain_only and not atom.is_sidechain:
             return False
-        # Filter residues is not the target acceptor
-        #if target and str(atom.residue) != str(target):
+        # Filter residues that are not surrounding the target 
         if sur_resname and str(atom.residue) not in sur_resname:
             return False
         # Otherwise, accept it
@@ -203,7 +201,9 @@ def _get_bond_triplets(topology, sur_resname, exclude_water=True, sidechain_only
         
     nh_donors = get_donors('N', 'H')
     oh_donors = get_donors('O', 'H')
-    xh_donors = np.array(nh_donors + oh_donors)
+    ch_donors = get_donors('C', 'H')
+    xh_donors = np.array(nh_donors + oh_donors + ch_donors)
+    #xh_donors = np.array(nh_donors + oh_donors)
 
     if len(xh_donors) == 0:
         # if there are no hydrogens or protein in the trajectory, we get

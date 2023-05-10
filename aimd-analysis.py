@@ -265,6 +265,7 @@ def main():
     f.add_option('--hb' , action="store_true",  default=False, help='Monitor the Hydrogen bonding')
     f.add_option('--plot' , type = str,  default = None, help='Plot with matplotlib.')
     f.add_option('--dist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
+    f.add_option('--td' , action="store_true",  default = False, help='Flag for time-dependent analysis.')
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
     f.add_option('--spc' , type = str, default = None, help='Extract structures from trajectory for single point calculations. Module: run and get')
     f.add_option('--spcplot' ,action="store_true",  default=False, help='Extract structures from trajectory for single point calculations. Module: run and get')
@@ -277,6 +278,7 @@ def main():
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
+    f.add_option('--s1meci' , action="store_true",  default=False, help='Plot S1min and MECI structures together')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -348,6 +350,7 @@ def main():
         # ON MACMINI    
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+            import geom_param as gp
             # LOAD TRAJECTORIE(S)
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors.dcd', top = topology)
@@ -396,7 +399,7 @@ def main():
             plt.plot(t, teta_pyra)
             plt.ylabel('HOOP (deg)')
             plt.xlabel('Time (fs)')
-            plt.ylim(-43,30)
+            plt.ylim(-90,30)
             plt.title('HOOP')
             plt.savefig('hoop.png')
             plt.close()
@@ -531,8 +534,8 @@ def main():
             plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
             plt.ylabel('P-torsion')
             plt.xlabel('I-torsion')
-            plt.xlim(-80,80)
-            plt.ylim(-80,80) 
+            plt.xlim(30,65)
+            plt.ylim(-95,-50) 
             #plt.ylim(-43,30)
             plt.title('P-I-Torsion')
             cbar=plt.colorbar(values=t)
@@ -564,12 +567,13 @@ def main():
                 plt.plot(T,dist*10)
                 plt.ylabel('Distance (A)')
                 plt.xlabel('Time (fs)')
+                plt.ylim(1.32,4.3) 
                 if arg.name:
                     plt.title('Distance %s -- GYC (%s)' % (table[i,0], arg.name))
                 else:
                     plt.title('Distance %s -- GYC' % table[i,0])
                 plt.savefig(fig_name)
-                plt.show(block = True)
+                #plt.show(block = True)
                 plt.close()
 
         if arg.analyze == "flap" or arg.analyze == "all":
@@ -585,7 +589,7 @@ def main():
             plt.plot(t,flap_dihedral_angle*r2d)
             plt.ylabel('Flapping Dihedral angle (deg)')
             plt.xlabel('Time (fs)')
-            plt.ylim(-40,32)
+            plt.ylim(-25,5)
             plt.title('Flapping Dihedral angle')
             plt.savefig('flap_dihedral.png')
             #plt.show(block = True)
@@ -691,53 +695,97 @@ def main():
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
-        #print(len(traj[0]))
-        # Get the index for the residues surrounding the chromophore.
-        #traj = md.load_pdb('sphere.pdb')
-        #print(len(pdb))
-        
-        # Use just the first frame for this analyis
-        traj=traj[0]
+        if arg.td == True:
+            
+            chrome = traj.topology.select('resname GYC')
+            out = open("closest-atoms-indexes-NEW.dat", 'w')
+            out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
 
-        chrome = traj.topology.select('resname GYC')
-        sur_resids, sur_resname = compute_neighbors(traj,chrome,0.4, True)
+            print("Closest atom from a residue to the chromophore\n")
+            print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
+            
 
-        out = open("closest-atoms-indexes.dat", 'w')
-        out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
-        # Run over the residues surrounding GYC
-        print("Closest atom from a residue to the chromophore\n")
-        print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
-        for i in range(len(sur_resids)):
-            #print("Get res_ids")
-            res_ids=traj.topology.select('resid %s' % sur_resids[i])
-            #print(sur_resname[i])
+            try_set=set()
+            # LOOP OVER EACH FRAME OF THE TRAJECTORY
+            for f in range(len(traj)):
 
-            # Run over the atoms within the residue
-            d=10000
-            #print("Run over res_ids", res_ids)
-            for atm in res_ids:
-                #print("Run over chrome ", atm)
-                for chm in chrome:
-                    #print("chm", chm)
-                    pair=np.array([[atm,chm]], dtype=np.int32) # P-ring <> HIP190
-                    dist = md.compute_distances(traj,pair)
-                    
-                    if dist < d:
-                        d = dist
-                        a1 = atm
-                        a2 = chm
+                trj=traj[f]
+                sur_resids, sur_resname = compute_neighbors(trj,chrome,0.4, True)
 
-            resname=traj.topology.atom(a1)
-            res_element=traj.topology.atom(a1).element
-            chrm_element=traj.topology.atom(a2)
+                # LOOP OVER THE NEIGHBORS 
+                for i in range(len(sur_resids)):
 
-            t=str(resname)
-            #if not t.startswith("H") and d > 0.0:
-            if d > 0.0:
-                #print('{:<5s}\t({:<8s})\t{:<4d}\tGYC({:<8s})\t{:<5d}\t{:>2.4f}'.format(str(resname), str(res_element), a1, str(chrm_element), a2, float(d*10)))
-                print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
-                out.write("%s %d %d\n" % (resname, a1, a2))
-        out.close()
+                    if sur_resids[i] not in try_set:
+                        try_set.add(sur_resids[i])
+
+                        res_ids=trj.topology.select('resid %s' % sur_resids[i])
+
+                        d=10000
+                        # Run over the atoms within the residue
+                        for atm in res_ids:
+                            for chm in chrome:
+                                pair=np.array([[atm,chm]], dtype=np.int32) 
+                                dist = md.compute_distances(trj,pair)
+                                
+                                if dist < d:
+                                    d = dist
+                                    a1 = atm
+                                    a2 = chm
+
+
+                        resname=trj.topology.atom(a1)
+                        res_element=trj.topology.atom(a1).element
+                        chrm_element=trj.topology.atom(a2)
+
+                        if d > 0.0:
+                            print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                            out.write("%s %d %d\n" % (resname, a1, a2))
+
+            out.close()
+
+        else:
+            # Use just the first frame for this analyis
+            traj=traj[0]
+
+            chrome = traj.topology.select('resname GYC')
+            sur_resids, sur_resname = compute_neighbors(traj,chrome,0.4, True)
+
+            out = open("closest-atoms-indexes.dat", 'w')
+            out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            # Run over the residues surrounding GYC
+            print("Closest atom from a residue to the chromophore\n")
+            print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
+            for i in range(len(sur_resids)):
+                #print("Get res_ids")
+                res_ids=traj.topology.select('resid %s' % sur_resids[i])
+                #print(sur_resname[i])
+
+                # Run over the atoms within the residue
+                d=10000
+                #print("Run over res_ids", res_ids)
+                for atm in res_ids:
+                    #print("Run over chrome ", atm)
+                    for chm in chrome:
+                        #print("chm", chm)
+                        pair=np.array([[atm,chm]], dtype=np.int32) # P-ring <> HIP190
+                        dist = md.compute_distances(traj,pair)
+                        
+                        if dist < d:
+                            d = dist
+                            a1 = atm
+                            a2 = chm
+
+                resname=traj.topology.atom(a1)
+                res_element=traj.topology.atom(a1).element
+                chrm_element=traj.topology.atom(a2)
+
+                t=str(resname)
+                #if not t.startswith("H") and d > 0.0:
+                if d > 0.0:
+                    #print('{:<5s}\t({:<8s})\t{:<4d}\tGYC({:<8s})\t{:<5d}\t{:>2.4f}'.format(str(resname), str(res_element), a1, str(chrm_element), a2, float(d*10)))
+                    print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                    out.write("%s %d %d\n" % (resname, a1, a2))
+            out.close()
 
     if arg.hb == True:
         """" Identify the hydrogen bonds, that involves a given target, 
@@ -1302,8 +1350,8 @@ def main():
 
 
         ## PLOT TYPE
-        #TYPE="pyr"
-        TYPE="ics"
+        TYPE="pyr"
+        #TYPE="ics"
 
         # Gas-phase MECI structures
         gasphase=['TFHBDI-MECII-acas.xyz', 'TFHBDI-MECIP-acas.xyz', 'TFHBDI-MECIP2-acas.xyz']
@@ -1312,7 +1360,6 @@ def main():
         
         frame=[arg.meci]
         
-
         type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
@@ -1422,8 +1469,10 @@ def main():
         plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
         
         if TYPE == "ics":
-            plt.xlim(-80,90)
-            plt.ylim(-100,80)
+            #plt.xlim(-80,90)
+            #plt.ylim(-100,80)
+            plt.xlim(20,70)
+            plt.ylim(-100,-40)
         else:
             plt.xlim(-120,120)
             plt.ylim(-120,120)
@@ -1434,10 +1483,12 @@ def main():
         #plt.savefig('meci-opt.svg', dpi=300, format='svg')
 
         if TYPE == "ics":
-            out=f"meci-opt-f{fm}00-init.png"
+            out=f"meci-opt-f{fm}00-init-ZOOM.png"
             plt.savefig(out, dpi=300, format='png')
-        
-        #plt.show(block = True)
+        #else:
+
+
+        plt.show(block = True)
         #plt.close()
         
 
@@ -1478,7 +1529,7 @@ def main():
         # SETUP FIG
         fig, ax = plt.subplots()
         
-        files=sorted(glob.iglob('meci-f27-*.dcd'))
+        files=sorted(glob.iglob('meci-*.dcd'))
         # COLORS
         color = cm.Paired(np.linspace(0, 1, len(files)))
         
@@ -1494,33 +1545,42 @@ def main():
             topology = md.load_prmtop(prmtop)
             traj = md.load_dcd(file, top = topology)
             N=len(traj)-1
+            N=0
             # I-torsion
             teta_i = gp.compute_torsion5(traj.xyz[N,chrome,:],i_pair,i_triple)
             # P-torsion
             teta_p = gp.compute_torsion5(traj.xyz[N,chrome,:],p_pair,p_triple)
             # Pyramizadlization
             teta_pyr = gp.compute_pyramidalization(traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
-                
+            
+            # Final geometry
+            scatter = ax.scatter(teta_i,teta_p, s=70,  c=teta_pyr, cmap='coolwarm', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
             I.append(teta_i)
             P.append(teta_p)
             PYR.append(teta_pyr)
 
+
             # Initial geometry
-            Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
-            Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
-            Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
+            #Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+            #Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+            #Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
             #scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
 
-            # Final geometry
-            scatter = ax.scatter(teta_i,teta_p, s=50,  c=teta_pyr, cmap='coolwarm', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            if len(file) == 16: 
+                name=file[5:12]
+            elif len(file) == 17:
+                name=file[5:13]
+            else:
+                name=file[5:14]
+            #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
+
+            
 
             # Connecting line
             #ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
 
-
-
         #scatter = ax.scatter(I,P, s=150, c=PYR, cmap='coolwarm', alpha=0.8, vmin=-40, vmax=40)
-           
         
         cbar=plt.colorbar(scatter)
         cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
@@ -1544,23 +1604,145 @@ def main():
             Pgas.append(teta_p)
             LabelName=gasphase[i]
             label.append(f"GP-{LabelName[7:13]}")
-        ax.plot([200, -200], [-200, 200], ls="-", c=".1", alpha=0.5)
+        scatter = ax.scatter(Igas,Pgas, s=70, color='red', marker='D')
+
+        ax.plot([200, -200], [-200, 200], ls="-", c=".1", alpha=0.2)
+        ax.plot([-130,130], [0,0], ls="-", c=".1", alpha=0.1)
+        ax.plot( [0,0], [-130,130],ls="-", c=".1", alpha=0.1)
+        ax.plot( [90,90], [-130,130],ls=":", c=".1", alpha=0.1)
+        ax.plot( [-90,-90], [-130,130],ls=":", c=".1", alpha=0.1)
+        ax.plot(  [-130,130],[90,90],ls=":", c=".1", alpha=0.1)
+        ax.plot(  [-130,130],[-90,-90],ls=":", c=".1", alpha=0.1)
+
         plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
         plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
-        
-
         plt.xlim(-120,120)
         plt.ylim(-120,120)
+        plt.xticks(np.arange(-120,121,step=30))
+        plt.yticks(np.arange(-120,121,step=30))
 
-        scatter = ax.scatter(Igas,Pgas, s=70, color='red', marker='D')
+
+
         
-        #plt.title("MECI structures")
-        plt.savefig('meci-f27-opt.png', dpi=300, format='png')
+        
+        #plt.title(r"S$_1$-min structures")
+        plt.savefig('US-init-ALL.png', dpi=300, format='png')
 
-        #plt.show(block = True)
+        plt.show(block = True)
         #plt.close()
 
-    
+
+    if arg.s1meci:
+        import mdtraj as md 
+        import socket, glob
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.pyplot import cm
+        from matplotlib.lines import Line2D
+
+         # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+        import geom_param as gp
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # TORSION INDEXES
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+
+        # PYRAMIDALIZATION INDEXES  
+        pyr_idx= [22,23,24,21]
+
+        # SETUP FIG
+        fig, ax = plt.subplots()
+        
+        s1files=sorted(glob.iglob('s1min-*.dcd'))
+        # COLORS
+        color = cm.Paired(np.linspace(0, 1, len(s1files)))
+        
+        for s1file, c in zip(s1files, color):
+            # SETUP FIG
+            #fig, ax = plt.subplots()
+
+            # S1 prmtop
+            s1prmtop=s1file.replace(".dcd", ".prmtop")
+
+            # MECI FILES
+            mecifile=s1file.replace("s1min-", "meci-")
+            meciprmtop=mecifile.replace(".dcd", ".prmtop")
+
+            # LOAD S1 TRAJECTORY
+            S1top = md.load_prmtop(s1prmtop)
+            S1traj = md.load_dcd(s1file, top = S1top)
+
+            # LOAD MECI TRAJECTORY
+            MECItop = md.load_prmtop(meciprmtop)
+            MECItraj = md.load_dcd(mecifile, top = MECItop)
+
+
+            # INITIAL GEOMETRY
+            Iteta_i = gp.compute_torsion5(S1traj.xyz[0,chrome,:],i_pair,i_triple)
+            Iteta_p = gp.compute_torsion5(S1traj.xyz[0,chrome,:],p_pair,p_triple)
+            Iteta_pyr = gp.compute_pyramidalization(S1traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3]) 
+            scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=0.5)
+
+            # FINAL S1min
+            N=len(S1traj)-1
+            S1teta_i = gp.compute_torsion5(S1traj.xyz[N,chrome,:],i_pair,i_triple)
+            S1teta_p = gp.compute_torsion5(S1traj.xyz[N,chrome,:],p_pair,p_triple)
+            S1teta_pyr = gp.compute_pyramidalization(S1traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            scatter = ax.scatter(S1teta_i,S1teta_p, s=100, c=S1teta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
+
+            # FINAL MECI
+            N=len(MECItraj)-1
+            MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],i_pair,i_triple)
+            MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],p_pair,p_triple)
+            MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            scatter = ax.scatter(MECIteta_i,MECIteta_p, s=100, c=MECIteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
+            #scatter = ax.scatter(MECIteta_i,MECIteta_p, s=10, color='g', alpha=0.9)
+            
+            # LABEL
+            if len(s1file) == 16: 
+                name=s1file[6:12]
+            elif len(s1file) == 17:
+                name=s1file[6:13]
+            else:
+                name=s1file[6:14]
+            #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
+
+            #ax.annotate("Init",  (Iteta_i+1,Iteta_p), fontsize=8)
+            #ax.annotate("S1min", (S1teta_i,S1teta_p), fontsize=8)
+            #ax.annotate("MECI",  (MECIteta_i,MECIteta_p), fontsize=8)
+
+            # CONNECTING LINE INIT -> S1
+            ax.plot([Iteta_i, S1teta_i], [Iteta_p, S1teta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
+            # CONNECTING LINE INIT -> S1
+            ax.plot([Iteta_i, MECIteta_i], [Iteta_p, MECIteta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
+            # CONNECTING LINE S1 -> MECI
+            ax.plot([S1teta_i, MECIteta_i], [S1teta_p, MECIteta_p],  ls="--", c="r", alpha=0.5)
+        
+            #cbar=plt.colorbar(scatter)
+            #cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+            #plt.title(name)
+            plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
+            plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
+
+            #plt.savefig(f's1-meci-{name}.png', dpi=300, format='png')
+            #plt.show(block = True)
+            #plt.close()
+
+        cbar=plt.colorbar(scatter)
+        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+        plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
+
+
     if arg.sim == True:    
         """
         Similaritites module
