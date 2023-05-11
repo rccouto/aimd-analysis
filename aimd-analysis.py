@@ -355,7 +355,7 @@ def main():
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors.dcd', top = topology)
 
-        elif arg.analyze == 'torsonly':
+        elif socket.gethostname() == "rcc-mac.kemi.kth.se" and arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('../sphere.prmtop')
@@ -1698,7 +1698,7 @@ def main():
             Iteta_i = gp.compute_torsion5(S1traj.xyz[0,chrome,:],i_pair,i_triple)
             Iteta_p = gp.compute_torsion5(S1traj.xyz[0,chrome,:],p_pair,p_triple)
             Iteta_pyr = gp.compute_pyramidalization(S1traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3]) 
-            scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=0.5)
+            scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=1)
 
             # FINAL S1min
             N=len(S1traj)-1
@@ -1724,9 +1724,9 @@ def main():
                 name=s1file[6:14]
             #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
 
-            #ax.annotate("Init",  (Iteta_i+1,Iteta_p), fontsize=8)
-            #ax.annotate("S1min", (S1teta_i,S1teta_p), fontsize=8)
-            #ax.annotate("MECI",  (MECIteta_i,MECIteta_p), fontsize=8)
+            ax.annotate("Init",  (Iteta_i+1,Iteta_p), fontsize=8)
+            ax.annotate("S1min", (S1teta_i,S1teta_p), fontsize=8)
+            ax.annotate("MECI",  (MECIteta_i,MECIteta_p), fontsize=8)
 
             # CONNECTING LINE INIT -> S1
             ax.plot([Iteta_i, S1teta_i], [Iteta_p, S1teta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
