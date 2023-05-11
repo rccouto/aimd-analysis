@@ -360,6 +360,13 @@ def main():
             import geom_param as gp
             topology = md.load_prmtop('../sphere.prmtop')
             traj = md.load_dcd('coors-all.dcd', top = topology)
+        
+        elif socket.gethostname() == "nhlist-desktop":
+            sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param') 
+            import geom_param as gp
+            # LOAD TRAJECTORIE(S)
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors.dcd', top = topology)
 
         # ON BERZELIUS
         else:
