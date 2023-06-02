@@ -279,6 +279,7 @@ def main():
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
     f.add_option('--s1meci' , action="store_true",  default=False, help='Plot S1min and MECI structures together')
+    f.add_option('--efield' , action="store_true",  default=False, help='Compute the electric field')
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -358,7 +359,7 @@ def main():
         elif socket.gethostname() == "rcc-mac.kemi.kth.se" and arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
-            topology = md.load_prmtop('../sphere.prmtop')
+            topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors-all.dcd', top = topology)
         
         elif socket.gethostname() == "nhlist-desktop":
@@ -703,7 +704,6 @@ def main():
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
         if arg.td == True:
-            
             chrome = traj.topology.select('resname GYC')
             out = open("closest-atoms-indexes-NEW.dat", 'w')
             out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
@@ -711,7 +711,6 @@ def main():
             print("Closest atom from a residue to the chromophore\n")
             print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
             
-
             try_set=set()
             # LOOP OVER EACH FRAME OF THE TRAJECTORY
             for f in range(len(traj)):
@@ -738,7 +737,6 @@ def main():
                                     d = dist
                                     a1 = atm
                                     a2 = chm
-
 
                         resname=trj.topology.atom(a1)
                         res_element=trj.topology.atom(a1).element
@@ -1186,6 +1184,44 @@ def main():
             #name=out.replace(".out", "-dipole.png")
             #plt.savefig(name, format='png', dpi=300)
 
+        elif arg.spc == 'min':
+            """ 
+            Create xyz files for single point calculations from minimized structures
+            """
+
+            # Get the index for the target molecule.
+            target = [924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+            # Index of connections to be substituted by H
+            subH=[908,961]
+            mol=np.append(target, subH)
+
+
+            files=sorted(glob.iglob('meci-*.dcd'))
+            for file in files:
+
+                prmtop=file.replace(".dcd", ".prmtop")
+                topology = md.load_prmtop(prmtop)
+                traj = md.load_dcd(file, top = topology)
+
+                # WHICH FRAME TO USE
+                #N=len(traj)-1
+                N=0
+
+                # File name
+                xyz = file.replace(".dcd", ".xyz")
+                xyz = xyz.replace("meci-", "")
+                out=open(xyz, 'w')
+
+                out.write('{}\n'.format(len(mol)))
+                out.write('Frame {}\n'.format(N))
+                for i in range(len(mol)):
+                    # Check if atom is in the H substitution list
+                    if mol[i] in subH:
+                        out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[N,mol[i],0]*10,traj.xyz[N,mol[i],1]*10,traj.xyz[N,mol[i],2]*10))
+                    else:
+                        out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[N,mol[i],0]*10,traj.xyz[N,mol[i],1]*10,traj.xyz[N,mol[i],2]*10))
+                out.close()
+
 
         else:
             print("Module | %s | not available in --spc." % arg.spc)
@@ -1546,7 +1582,6 @@ def main():
         PYR=[]
         for file, c in zip(files, color):
 
-            
             prmtop=file.replace(".dcd", ".prmtop")
 
             topology = md.load_prmtop(prmtop)
@@ -1567,7 +1602,6 @@ def main():
             P.append(teta_p)
             PYR.append(teta_pyr)
 
-
             # Initial geometry
             #Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
             #Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
@@ -1581,8 +1615,6 @@ def main():
             else:
                 name=file[5:14]
             #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
-
-            
 
             # Connecting line
             #ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
@@ -1747,8 +1779,8 @@ def main():
 
         cbar=plt.colorbar(scatter)
         cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
-        plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
-
+        #plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
+        plt.show(block = True)
 
     if arg.sim == True:    
         """
@@ -2076,17 +2108,186 @@ def main():
         
         plt.show()
 
+    if arg.efield == True:
+        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/Efield') 
+        import geom
+        import fileio
+
+        # --> Gather mutated PDB files <-- #
+        min_pdbs = []
+        prmtops = []
+        pdb_prmtops = {}
+
+        min_dir = '/Users/rafael/theochem/projects/dronpa2/efield/pdbs'
+        prmtop_dir = '/Users/rafael/theochem/projects/dronpa2/efield/prmtops'
+        min_pdbs, prmtops, pdb_prmtops = fileio.gather_pdbs(min_dir, min_pdbs, prmtops, pdb_prmtops)
+        print('Number of pdb files: {}'.format(len(min_pdbs)))
+        print('Number of prmtop files: {}'.format(len(pdb_prmtops)))
+
+        
+        # --> Gather PDB data for WT GFP and all mutants <-- #
+        print('\n# --> PDB file processing <-- #')
+        min_pdb_files = None
+        prmtop_files = None
+        pdb_df_list = None
+
+        print(min_pdbs)
+        # Gather min and prmtop files
+        min_pdb_files = ['{}/{}'.format(min_dir, min_pdb) for min_pdb in min_pdbs]
+        #min_pdb_files.insert(0, wt_min)
+        prmtop_files = ['{}/{}'.format(prmtop_dir, prmtop) for prmtop in prmtops] 
+        #prmtop_files.insert(0, wt_prmtop)
+        assert(len(min_pdb_files) == len(prmtop_files))
+
+        print(min_pdb_files)
+
+        # Store all pdb data as a list of dataframes
+        pdb_df_list = fileio.process_pdb_data(min_pdb_files, nproc=3, taskset=None)
+
+        # Pickle intermediate data
+        fileio.pickle_data(min_pdb_files, 'min_pdb_files.pkl')
+        fileio.pickle_data(prmtop_files, 'prmtop_files.pkl')
+        fileio.pickle_data(pdb_df_list, 'pdb_df_list.pkl')
+
+        
+        # --> Partition chromophore by moiety <-- #
+        chr_seq = 'GYC'
+        
+        chr_atomnames = ['N','H','C1','H1','C3','H3','H5','SH','HS','C','O','C2','H2','H4', # caps
+                        'CA','NA','CB','OA','NB','CC', # I-ring
+                        'CD','HD', #bridge
+                        'CE','CF','FH','CG','HG','CH','FF','CI','FI','CJ','OK'] #P-ring
+        print('Number of chromophore atoms: ', len(chr_atomnames))
+
+        # Chromophore ring moieties - heavy atom names
+        print('\n# --> Chromophore index handling <-- #')
+        Iring_atoms = ['NA','CA','CB','NB','CC', 'OA']
+        Pring_atoms = ['CE','CF','FH','CG','CH','FF','CI','FI','CJ','OK']
+        bridge_atoms = ['CD']
+
+        # Chromophore ring moieties - indices
+        Iring_idxs = [chr_atomnames.index(name) for name in Iring_atoms]
+        Pring_idxs = [chr_atomnames.index(name) for name in Pring_atoms]
+        bridge_idxs = [chr_atomnames.index(name) for name in bridge_atoms]
+
+        print('Iring idxs: {}'.format(Iring_idxs))
+        print('Pring idxs: {}'.format(Pring_idxs))
+        print('bridge idxs: {}'.format(bridge_idxs))
+
+        
+        # --> Parition system into chromophore and non-chromophore regions <-- #
+        print('\n# --> Partitioning: chromophore data <-- #')
+        chr_Xs = None
+        chr_Ys = None
+        chr_Zs = None
+        chr_XYZs = None
+        chr_Ms = None
+        chr_Qs = None
+
+        chr_Xs, chr_Ys, chr_Zs, chr_XYZs, chr_Ms, chr_Qs = geom.obtain_chr_data(pdb_df_list, prmtop_files, chr_seq, chr_atomnames)
+
+        
+        # Pickle intermediate data
+        fileio.pickle_data(chr_Xs, 'chr_Xs.pkl')
+        fileio.pickle_data(chr_Ys, 'chr_Ys.pkl')
+        fileio.pickle_data(chr_Zs, 'chr_Zs.pkl')
+        fileio.pickle_data(chr_XYZs, 'chr_XYZs.pkl')
+        fileio.pickle_data(chr_Ms, 'chr_Ms.pkl')
+        fileio.pickle_data(chr_Qs, 'chr_Qs.pkl')
+
+        
+        # --> Parition system into chromophore and non-chromophore regions <-- #
+        print('\n# --> Partitioning: non-chromophore data <-- #')
+        nonchr_residues = None
+        nonchr_XYZs = None
+        nonchr_Ms = None
+        nonchr_Qs = None
+
+        nonchr_residues, nonchr_XYZs, nonchr_Ms, nonchr_Qs = geom.obtain_nonchr_data(pdb_df_list, prmtop_files, chr_seq)
+
+        # Pickle intermediate data
+        fileio.pickle_data(nonchr_residues, 'nonchr_residues.pkl')
+        fileio.pickle_data(nonchr_XYZs, 'nonchr_XYZs.pkl')
+        fileio.pickle_data(nonchr_Ms, 'nonchr_Ms.pkl')
+        fileio.pickle_data(nonchr_Qs, 'nonchr_Qs.pkl')
+
+        assert(len(chr_XYZs) == len(nonchr_XYZs))
+
+        
+        # --> Obtain Efield probe vectors on chromophore atoms <-- #
+        print('\n# --> Calculating probe vectors for Iring, Pring, bridge atoms <-- #')
+        Iring_CO_idxs = [chr_atomnames.index('CJ'), chr_atomnames.index('OK')]
+        Pring_CO_idxs = [chr_atomnames.index('CB'), chr_atomnames.index('OA')]
+        bridge_CH_idxs = [chr_atomnames.index('CD'), chr_atomnames.index('HD')]
+
+        print(chr_XYZs[0][31])
+        Iring_CO_midpts = geom.obtain_probe_point(chr_XYZs, Iring_CO_idxs)
+        Pring_CO_midpts = geom.obtain_probe_point(chr_XYZs, Pring_CO_idxs)
+        bridge_CH_midpts = geom.obtain_probe_point(chr_XYZs, bridge_CH_idxs)
+
+        Iring_CO_vectors = geom.obtain_probe_vector(chr_XYZs, Iring_CO_idxs)
+        Pring_CO_vectors = geom.obtain_probe_vector(chr_XYZs, Pring_CO_idxs)
+        bridge_CH_vectors = geom.obtain_probe_vector(chr_XYZs, bridge_CH_idxs)
+
+
+        # --> Calculate protein electric field acting along probe vectors <-- #
+        print('\n# --> Calculating Efield along probe vectors <-- #')
+        df_Iring_CO_Efield = None
+        df_Pring_CO_Efield = None
+        df_bridge_CH_Efield = None
+
+        Iring_CO_Efield = geom.calculate_Efield(Iring_CO_midpts, Iring_CO_vectors, chr_XYZs, chr_Qs, nonchr_XYZs, nonchr_Qs)
+        Pring_CO_Efield = geom.calculate_Efield(Pring_CO_midpts, Pring_CO_vectors, chr_XYZs, chr_Qs, nonchr_XYZs, nonchr_Qs)
+        bridge_CH_Efield = geom.calculate_Efield(bridge_CH_midpts, bridge_CH_vectors, chr_XYZs, chr_Qs, nonchr_XYZs, nonchr_Qs)
+        
+        # Store resulting data in dataframe
+        print('Generating dataframes...')
+        df_Iring_CO_Efield = pd.DataFrame(Iring_CO_Efield, columns=['Efield_Iring_CO (MV/cm)'])
+        df_Pring_CO_Efield = pd.DataFrame(Pring_CO_Efield, columns=['Efield_Pring_CO (MV/cm)'])
+        df_bridge_CH_Efield = pd.DataFrame(bridge_CH_Efield, columns=['Efield_bridge_CH (MV/cm)'])
+
+        # Pickle intermediate data
+        fileio.pickle_data(df_Iring_CO_Efield, 'df_Iring_CO_Efield.pkl')
+        fileio.pickle_data(df_Pring_CO_Efield, 'df_Pring_CO_Efield.pkl')
+        fileio.pickle_data(df_bridge_CH_Efield, 'df_bridge_CH_Efield.pkl')
+        
+        print(df_Iring_CO_Efield)
+        print(df_Pring_CO_Efield)
+        print(df_bridge_CH_Efield)
+        
+
     if arg.test == True:
         import matplotlib.pyplot as plt
         import numpy as np
+        import mdtraj as md
+        import MDAnalysis as mda
 
 
-        Idihedrals = np.load('i_torsion_I-100.npy')
-        Pdihedrals = np.load('p_torsion_I-100.npy')
+        #traj=mda.coordinates.DCD.DCDReader('coors.dcd')
+        #print(traj.dimensions)
+        traj=md.load('vel.dcd', top='sphere.prmtop')
+        #print('0',traj.topology.atom(950), traj.xyz[0][950]) # FH
+        #print('0',traj.topology.atom(954),traj.xyz[0][954])  # FF
+        print('0',traj.topology.atom(956),traj.xyz[0][956])  # FI
+        #print('0',traj.topology.atom(952),traj.xyz[0][952])
+        #print('1',traj.topology.atom(950), traj.xyz[1][950])
+        #print('1',traj.topology.atom(954),traj.xyz[1][954])
+        print('1',traj.topology.atom(956),traj.xyz[1][956])
+        #print('1',traj.topology.atom(952),traj.xyz[1][952])
 
-        plt.plot(Pdihedrals)
-        plt.show()
+        mF=18.9984031627
+        mH=1.00782503223
 
+        dTdF=(traj.xyz[1][956]-traj.xyz[0][956])*2*mF
+        print("dTdF", dTdF)
+
+        vi_fdf_H=traj.xyz[0][956]+(dTdF/(2*mH))
+        print("vi_fdf_H",vi_fdf_H)
+        print("vi_fdf_F", traj.xyz[1][956])
+        traj.xyz[1][956]=vi_fdf_H
+
+        Traj=traj[0]
+        Traj.save_amberrst7('Vel.rst7')
 
 if __name__=="__main__":
     main()
