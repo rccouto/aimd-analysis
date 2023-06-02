@@ -2350,6 +2350,7 @@ def main():
         import matplotlib.pyplot as plt
         import numpy as np
         import mdtraj as md
+        import math
 
         # LOAD VELOCITY AND PRMTOP FILES
         traj=md.load('vel.dcd', top='../sphere.prmtop')
@@ -2361,13 +2362,18 @@ def main():
         mF=18.9984031627
         mH=1.00782503223
 
+        #SCALE
+        scale=math.sqrt(mF/mH)
+
         #LOOP OVER THE DIFFERENT F/H
         Hs=[950,954,956]
         for h in Hs:
 
-            dTdF=(traj.xyz[lastFrame][h]-traj.xyz[secLastFrame][h])*2*mF
-            vi_fdf_H=traj.xyz[secLastFrame][h]+(dTdF/(2*mH))
-            traj.xyz[lastFrame][h]=vi_fdf_H
+            #dTdF=(traj.xyz[lastFrame][h]-traj.xyz[secLastFrame][h])*2*mF
+            #vi_fdf_H=traj.xyz[secLastFrame][h]+(dTdF/(2*mH))
+            #traj.xyz[lastFrame][h]=vi_fdf_H
+            traj.xyz[lastFrame][h]=traj.xyz[lastFrame][h]*scale
+
 
         Traj=traj[lastFrame]
         Traj.save_amberrst7('ScaledVel.rst7')
