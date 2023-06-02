@@ -278,8 +278,11 @@ def main():
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
+    f.add_option('--violin2d' , action="store_true",  default=False, help='Make Violing plots from 2D US')
     f.add_option('--s1meci' , action="store_true",  default=False, help='Plot S1min and MECI structures together')
     f.add_option('--efield' , action="store_true",  default=False, help='Compute the electric field')
+    f.add_option('--velscale' , action="store_true",  default=False, help='Scale velocity dcd file for hydrogen.')
+
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -369,7 +372,7 @@ def main():
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors.dcd', top = topology)
 
-         elif socket.gethostname() == "berzelius002" and arg.analyze == 'torsonly':
+        elif socket.gethostname() == "berzelius002" and arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('sphere.prmtop')
@@ -2052,7 +2055,7 @@ def main():
         au_to_ps = 2.418884254E-5
         au_to_eV = 27.2114
 
-        windows = np.arange(-100, 100+1, 10)
+        windows = np.arange(-40, 40+1, 10)
 
         if X == "I":
             windows = ['I' + str(w) for w in windows]
@@ -2107,6 +2110,86 @@ def main():
         plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
         plt.xlim([-110, 110])
         plt.ylim([-180, 180])
+        #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
+        #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
+        plt.tight_layout()
+        
+        plt.savefig('violin.png', dpi=400)
+        
+        plt.show()
+
+    if arg.violin2d == True:
+        from matplotlib.ticker import MultipleLocator
+        import matplotlib.pyplot as plt
+        import numpy as np
+    
+        clr = 'r',
+        edgeclr = 'darkred'
+
+        # Sampled torsion
+        X="P"
+        # Other axis
+        Y="P"
+
+        # Conversions
+        au_to_ps = 2.418884254E-5
+        au_to_eV = 27.2114
+
+        windows = np.arange(-40, 40+1, 10)
+
+        #if X == "I":
+        #    windows = ['I' + str(w) for w in windows]
+        #else:
+        #    windows = ['P' + str(w) for w in windows]
+
+        for w in windows:
+            Idihedrals = np.load('i_torsion_w{}.npy'.format(w))
+            Pdihedrals = np.load('p_torsion_w{}.npy'.format(w))
+
+            Idihedrals=np.nan_to_num(Idihedrals)
+            Pdihedrals=np.nan_to_num(Pdihedrals)
+
+            
+            #if w == 'P-100':
+            #    for i in range(len(Pdihedrals)):
+            #        print(Pdihedrals[i])
+
+            plt.figure(0)
+            plt.axhline([0.0], ls='--', color='gray', alpha=0.8, zorder=0)
+
+            xpos = int(w)
+
+            if Y == "I":
+                parts = plt.violinplot(Idihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
+            else:
+                parts = plt.violinplot(Pdihedrals,[xpos],showmedians=True,showextrema=False,widths=7.0)
+            #for partname in ('cbars','cmins','cmaxes','cmedians'):
+            
+            for partname in ['cmedians']:
+                vp = parts[partname]
+                vp.set_edgecolor('black')
+                vp.set_linewidth(1.5)
+            for pc in parts['bodies']:
+                pc.set_facecolor(clr)
+                pc.set_alpha(0.8)
+                pc.set_linewidth(1.5)
+                #pc.set_edgecolor(edgeclr)
+                pc.set_edgecolor('k')
+
+        #if X == "I":
+        #    plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
+        #else:
+        plt.xlabel('$\phi_{IP}$ window (degrees)', fontsize=16)
+        
+        if Y == "I":
+            plt.ylabel('$\phi_I$ samples (degrees)', fontsize=16)
+        else:
+            plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+        
+        plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
+        plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
+        plt.xlim([-60, 60])
+        plt.ylim([-60, 60])
         #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
         #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
         plt.tight_layout()
@@ -2263,6 +2346,32 @@ def main():
         print(df_bridge_CH_Efield)
         
 
+    if arg.velscale == True:
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import mdtraj as md
+
+        # LOAD VELOCITY AND PRMTOP FILES
+        traj=md.load('vel.dcd', top='../sphere.prmtop')
+
+        lastFrame=len(traj)-1
+        secLastFrame=len(traj)-2
+
+        # HYDROGEN AND FLUORIDE MASSES
+        mF=18.9984031627
+        mH=1.00782503223
+
+        #LOOP OVER THE DIFFERENT F/H
+        Hs=[950,954,956]
+        for h in Hs:
+
+            dTdF=(traj.xyz[lastFrame][h]-traj.xyz[secLastFrame][h])*2*mF
+            vi_fdf_H=traj.xyz[secLastFrame][h]+(dTdF/(2*mH))
+            traj.xyz[lastFrame][h]=vi_fdf_H
+
+        Traj=traj[lastFrame]
+        Traj.save_amberrst7('ScaledVel.rst7')
+    
     if arg.test == True:
         import matplotlib.pyplot as plt
         import numpy as np
