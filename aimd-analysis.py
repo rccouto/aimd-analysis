@@ -35,7 +35,7 @@ def get_tc_md_results(file):
         if re.search(r"Velocity Verlet integration time step:", i) is not None and ts == 0: 
             words = i.split()
             ts = float(words[5])
-            ts=1
+            #ts=1
            
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
@@ -275,6 +275,7 @@ def main():
     f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ') 
     f.add_option('--meci' ,  type=int,  default=None, help='MECI analysis')
     f.add_option('--meci2' ,  type=str,  default=None, help='MECI analysis - all .dcd files in the folder')
+    f.add_option('--meci3' ,  type=str,  default=None, help='MECI analysis - just for checking')
     f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
@@ -282,6 +283,8 @@ def main():
     f.add_option('--s1meci' , action="store_true",  default=False, help='Plot S1min and MECI structures together')
     f.add_option('--efield' , action="store_true",  default=False, help='Compute the electric field')
     f.add_option('--velscale' , action="store_true",  default=False, help='Scale velocity dcd file for hydrogen.')
+    f.add_option('--dcd' , type=str,  default=None, help='Path for the dcd file to be read.')
+    f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -292,6 +295,7 @@ def main():
     # GET ENERGY MODULE
     if arg.energy:
         import numpy as np
+        import matplotlib.pyplot as plt
 
         # GET STEP (fs) AND ENERGY (a.u.)
         st, step, energy, dipole = get_tc_md_results(arg.energy)
@@ -369,8 +373,8 @@ def main():
             sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param') 
             import geom_param as gp
             # LOAD TRAJECTORIE(S)
-            topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors.dcd', top = topology)
+            topology = md.load_prmtop(arg.top)
+            traj = md.load_dcd(arg.dcd, top = topology)
 
         elif socket.gethostname() == "berzelius002" and arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
@@ -687,6 +691,8 @@ def main():
         if not arg.analyze:
             print("      Analyze module not available! \n      Rerun with -h to see the options.")
             sys.exit(1)
+
+    
 
     if arg.dist == True:
         import mdtraj as md
@@ -1675,7 +1681,7 @@ def main():
         
         
         #plt.title(r"S$_1$-min structures")
-        plt.savefig('US-init-ALL.png', dpi=300, format='png')
+        #plt.savefig('US-init-ALL.png', dpi=300, format='png')
 
         plt.show(block = True)
         #plt.close()
@@ -1980,6 +1986,7 @@ def main():
     if arg.dipole:
         import matplotlib
         import numpy as np
+        import matplotlib.pyplot as plt
 
         # GET STEP (fs) AND ENERGY (a.u.)
         st, step, energy, dipole = get_tc_md_results(arg.dipole)
@@ -2378,38 +2385,119 @@ def main():
         Traj=traj[lastFrame]
         Traj.save_amberrst7('ScaledVel.rst7')
     
-    if arg.test == True:
-        import matplotlib.pyplot as plt
+    if arg.meci3 == True:
+        import mdtraj as md 
+        import socket, glob
         import numpy as np
-        import mdtraj as md
-        import MDAnalysis as mda
+        import matplotlib.pyplot as plt
+        from matplotlib.pyplot import cm
+        from matplotlib.lines import Line2D
+
+         # ON MACMINI    
+        if socket.gethostname() == "rcc-mac.kemi.kth.se":
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+        import geom_param as gp
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # TORSION INDEXES
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+
+        # PYRAMIDALIZATION INDEXES  
+        pyr_idx= [22,23,24,21]
+
+        # SETUP FIG
+        fig, ax = plt.subplots()
+        
+        mecifiles=sorted(glob.iglob('meci-f20*.dcd'))
+        # COLORS
+        color = cm.Paired(np.linspace(0, 1, len(mecifiles)))
+        
+        for mecifile, c in zip(mecifiles, color):
+            # SETUP FIG
+            #fig, ax = plt.subplots()
+
+            # MECI FILES
+            meciprmtop=mecifile.replace(".dcd", ".prmtop")
+
+            # LOAD MECI TRAJECTORY
+            MECItop = md.load_prmtop(meciprmtop)
+            MECItraj = md.load_dcd(mecifile, top = MECItop)
 
 
-        #traj=mda.coordinates.DCD.DCDReader('coors.dcd')
-        #print(traj.dimensions)
-        traj=md.load('vel.dcd', top='sphere.prmtop')
-        #print('0',traj.topology.atom(950), traj.xyz[0][950]) # FH
-        #print('0',traj.topology.atom(954),traj.xyz[0][954])  # FF
-        print('0',traj.topology.atom(956),traj.xyz[0][956])  # FI
-        #print('0',traj.topology.atom(952),traj.xyz[0][952])
-        #print('1',traj.topology.atom(950), traj.xyz[1][950])
-        #print('1',traj.topology.atom(954),traj.xyz[1][954])
-        print('1',traj.topology.atom(956),traj.xyz[1][956])
-        #print('1',traj.topology.atom(952),traj.xyz[1][952])
+            # INITIAL GEOMETRY
+            Iteta_i = gp.compute_torsion5(MECItraj.xyz[0,chrome,:],i_pair,i_triple)
+            Iteta_p = gp.compute_torsion5(MECItraj.xyz[0,chrome,:],p_pair,p_triple)
+            Iteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3]) 
+            scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=1)
 
-        mF=18.9984031627
-        mH=1.00782503223
+            # FINAL MECI
+            #N=len(MECItraj)-1
+            #MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],i_pair,i_triple)
+            #MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],p_pair,p_triple)
+            #MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            #scatter = ax.scatter(MECIteta_i,MECIteta_p, s=100, c=MECIteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
+            
 
-        dTdF=(traj.xyz[1][956]-traj.xyz[0][956])*2*mF
-        print("dTdF", dTdF)
+            # CONNECTING LINE INIT -> S1
+            #ax.plot([Iteta_i, MECIteta_i], [Iteta_p, MECIteta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
 
-        vi_fdf_H=traj.xyz[0][956]+(dTdF/(2*mH))
-        print("vi_fdf_H",vi_fdf_H)
-        print("vi_fdf_F", traj.xyz[1][956])
-        traj.xyz[1][956]=vi_fdf_H
+        
+            #cbar=plt.colorbar(scatter)
+            #cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+            #plt.title(name)
+            plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
+            plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
 
-        Traj=traj[0]
-        Traj.save_amberrst7('Vel.rst7')
+            #plt.savefig(f's1-meci-{name}.png', dpi=300, format='png')
+            #plt.show(block = True)
+            #plt.close()
+
+        cbar=plt.colorbar(scatter)
+        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+        #plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
+        plt.show(block = True)
+
+    if arg.test == True:
+        #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
+        import hbond as hb
+        import mdtraj as md 
+        import numpy as np
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        sample=['-90','-80','-70','-60','-50','-40','-30','-20','-10','0','10','20','30','40','50','60','70','80','90','100']
+
+        colors=['black', 'silver', 'red',  'salmon', 'brown', 'orange', 'gold','yellow', 'olive', 'green', 'lime', 'teal', 'aqua', 'blue', 'navy', 'violet', 'lavender', 'magenta', 'pink', 'purple']
+
+        fig, ax = plt.subplots()
+        for count, frame in enumerate(sample):
+
+            Itorsion=np.load(f"i_torsion_I{frame}.npy")
+            Ptorsion=np.load(f"p_torsion_I{frame}.npy")
+
+            # PLOT PROPAGATION
+            #plt.scatter(Itorsion,Ptorsion, c=colors[count], label=sample[count])
+            scatter = ax.scatter(Itorsion,Ptorsion, c=colors[count], label=sample[count])
+
+        fig.set_figheight(5)
+        fig.set_figwidth(7)
+
+        #plt.legend(handles=colors, labels=sample, loc='upper left', frameon=False)
+        plt.ylabel('P-torsion')
+        plt.xlabel('I-torsion')
+        plt.title('P-I-Torsion')
+        plt.legend(loc=1, ncol=2)
+
+        plt.savefig('US-scatter.png', dpi=300)
+        plt.show()
 
 if __name__=="__main__":
     main()
