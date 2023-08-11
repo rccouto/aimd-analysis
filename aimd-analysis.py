@@ -276,7 +276,8 @@ def main():
     f.add_option('--meci' ,  type=int,  default=None, help='MECI analysis')
     f.add_option('--meci2' ,  type=str,  default=None, help='MECI analysis - all .dcd files in the folder')
     f.add_option('--meci3' ,  type=str,  default=None, help='MECI analysis - just for checking')
-    f.add_option('-s', '--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
+    f.add_option('--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
+    f.add_option('--simclose' , action="store_true",  default=False, help='Runs a similarities analysis just for the close residues.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
     f.add_option('--violin' , action="store_true",  default=False, help='Make Violing plots')
     f.add_option('--violin2d' , action="store_true",  default=False, help='Make Violing plots from 2D US')
@@ -598,7 +599,7 @@ def main():
                 plt.plot(T,dist*10)
                 plt.ylabel('Distance (A)')
                 plt.xlabel('Time (fs)')
-                plt.ylim(1.32,4.3) 
+                #plt.ylim(1.32,4.3) 
                 if arg.name:
                     plt.title('Distance %s -- GYC (%s)' % (table[i,0], arg.name))
                 else:
@@ -1914,6 +1915,67 @@ def main():
             #plt.savefig(f"{frame}_KLD_sidechain_radius.png", dpi=300)
             #plt.close()
             #plt.show()
+
+    if arg.simclose == True:    
+        """
+        Similaritites module
+        """
+        import mdtraj as md
+        import numpy as np
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        frames=['f2000', 'f2700', 'f3400', 'f4100', 'f4800', 'f5500', 'f6200', 'f6900', 'f7600', 'f8300', 'f9000']
+        
+        fig, axs=plt.subplots(6, 2)
+        fig.subplots_adjust(hspace = 0.2, wspace=0.1)
+        fig.set_figheight(20)
+        fig.set_figwidth(20)
+        axs = axs.ravel()
+
+        prevRes = [99999]
+        j=0
+        for count, frame in enumerate(frames):
+            # Load PDB
+            pdb = md.load_pdb(f"{frame}-1stFrame.pdb")
+            chrome = pdb.topology.select('resname GYC')
+
+            # Load similatities results
+            simList=np.load(f"../results_sidechain/{frame}_KLD_sidechain.npy")
+            simListBackbone=np.load(f"../results_backbone/{frame}_KLD_backbone.npy")
+
+            #simList=simList-simListBackbone
+
+            simRes=np.linspace(0, len(simList)-1, len(simList))
+            
+            dist = [0.4]
+
+            resids, resnames = compute_neighbors(pdb,chrome,dist[0], False)
+            resids.sort()
+
+            currentRes=np.array(resids)
+            layer=np.setdiff1d(currentRes, prevRes)
+
+            layerRes=[]
+            layerTest=[]
+            for i in range(len(simList)):
+                if simRes[i] in layer:
+                    layerTest.append(int(simRes[i]+1))
+                    layerRes.append(simList[i])
+
+            x = np.arange(len(layerTest))
+            wid=len(x)/70
+            axs[j].bar(x, layerRes, width=wid)
+            axs[j].set_xticks(x, layerTest, fontsize=9)
+            axs[j].set_title(frame)
+            
+            j = j + 1
+
+        plt.savefig(f"{frame}_KLD_backbone_radius.png", dpi=300)
+
+        #plt.savefig(f"{frame}_KLD_sidechain_radius.png", dpi=300)
+        #plt.close()
+        #plt.show()
 
 
     if arg.torsion == True:
