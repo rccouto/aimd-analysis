@@ -284,6 +284,8 @@ def main():
     f.add_option('--efield' , action="store_true",  default=False, help='Compute the electric field')
     f.add_option('--velscale' , action="store_true",  default=False, help='Scale velocity dcd file for hydrogen.')
     f.add_option('--dcd' , type=str,  default=None, help='Path for the dcd file to be read.')
+    f.add_option('--dcd2' , type=str,  default=None, help='Path for the dcd file to be read.')
+    f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
@@ -355,6 +357,7 @@ def main():
         import socket
         import matplotlib.pyplot as plt
 
+       
         # ON MACMINI    
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
@@ -374,8 +377,13 @@ def main():
             import geom_param as gp
             # LOAD TRAJECTORIE(S)
             topology = md.load_prmtop(arg.top)
-            traj = md.load_dcd(arg.dcd, top = topology)
-
+            if arg.dcd2 and arg.dcd :
+                traj1 = md.load_dcd(arg.dcd, top = topology)
+                traj2 = md.load_dcd(arg.dcd2, top = topology)
+                traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+                del traj1, traj2
+            else:
+                traj = md.load_dcd(arg.dcd, top = topology)
 
         elif socket.gethostname() == "berzelius002" and arg.analyze == 'torsonly':
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
