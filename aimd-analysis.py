@@ -588,11 +588,15 @@ def main():
                 
                 if arg.name:
                     fig_name = "%s-GYC-closest-dist-%s.png" % (table[i,0], arg.name)
+                    data_name = "%s-GYC-closest-dist-%s.npy" % (table[i,0], arg.name)
                 else:
                     fig_name = "%s-GYC-closest-dist.png" % (table[i,0])
+                    data_name = "%s-GYC-closest-dist.npy" % (table[i,0])
                 #print(fig_name)
                 
                 dist = md.compute_distances(traj,pair)
+                # Save distance
+                np.save(data_name,np.array(dist))
 
                 T=np.linspace(0,len(dist)/2,len(dist))
 
@@ -607,6 +611,8 @@ def main():
                 plt.savefig(fig_name)
                 #plt.show(block = True)
                 plt.close()
+
+
 
         if arg.analyze == "flap" or arg.analyze == "all":
             """"
@@ -2133,7 +2139,7 @@ def main():
         au_to_ps = 2.418884254E-5
         au_to_eV = 27.2114
 
-        windows = np.arange(-40, 40+1, 10)
+        windows = np.arange(-100, 100+1, 10)
 
         if X == "I":
             windows = ['I' + str(w) for w in windows]
@@ -2213,7 +2219,7 @@ def main():
         au_to_ps = 2.418884254E-5
         au_to_eV = 27.2114
 
-        windows = np.arange(-40, 40+1, 10)
+        windows = np.arange(-100, 100+1, 10)
 
         #if X == "I":
         #    windows = ['I' + str(w) for w in windows]
@@ -2264,10 +2270,10 @@ def main():
         else:
             plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
         
-        plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
-        plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
-        plt.xlim([-60, 60])
-        plt.ylim([-60, 60])
+        plt.xticks(np.arange(-110, 110+1, 20), fontsize=14)
+        plt.yticks(np.arange(-110, 110+1, 20), fontsize=14)
+        plt.xlim([-110, 110])
+        plt.ylim([-110, 110])
         #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
         #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
         plt.tight_layout()
@@ -2544,15 +2550,15 @@ def main():
         import matplotlib
         import matplotlib.pyplot as plt
 
-        sample=['-90','-80','-70','-60','-50','-40','-30','-20','-10','0','10','20','30','40','50','60','70','80','90','100']
+        sample=['-100', '-90','-80','-70','-60','-50','-40','-30','-20','-10','0','10','20','30','40','50','60','70','80','90','100']
 
-        colors=['black', 'silver', 'red',  'salmon', 'brown', 'orange', 'gold','yellow', 'olive', 'green', 'lime', 'teal', 'aqua', 'blue', 'navy', 'violet', 'lavender', 'magenta', 'pink', 'purple']
+        colors=['black', 'silver', 'red',  'salmon', 'brown', 'orange', 'gold','yellow', 'olive', 'green', 'lime', 'teal', 'aqua', 'blue', 'navy', 'violet', 'lavender', 'magenta', 'pink', 'purple', 'black']
 
         fig, ax = plt.subplots()
         for count, frame in enumerate(sample):
 
-            Itorsion=np.load(f"i_torsion_I{frame}.npy")
-            Ptorsion=np.load(f"p_torsion_I{frame}.npy")
+            Itorsion=np.load(f"i_torsion_w{frame}.npy")
+            Ptorsion=np.load(f"p_torsion_w{frame}.npy")
 
             # PLOT PROPAGATION
             #plt.scatter(Itorsion,Ptorsion, c=colors[count], label=sample[count])
