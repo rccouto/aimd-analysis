@@ -275,7 +275,7 @@ def main():
     f.add_option('--minima' , type=str,  default=None, help='Minima analysis: "meci", "is", "ls1d" ') 
     f.add_option('--meci' ,  type=int,  default=None, help='MECI analysis')
     f.add_option('--meci2' ,  type=str,  default=None, help='MECI analysis - all .dcd files in the folder')
-    f.add_option('--meci3' ,  type=str,  default=None, help='MECI analysis - just for checking')
+    f.add_option('--meci3' ,  action="store_true",  default=False, help='MECI analysis - just for checking')
     f.add_option('--sim' , action="store_true",  default=False, help='Runs a similarities analysis.')
     f.add_option('--simclose' , action="store_true",  default=False, help='Runs a similarities analysis just for the close residues.')
     f.add_option('--torsion' , action="store_true",  default=False, help='Torsion analysis.')
@@ -288,6 +288,7 @@ def main():
     f.add_option('--dcd2' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
+    f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -321,7 +322,6 @@ def main():
         E=np.array(E).reshape(-1,2)
         #print(len(E))
         np.save("s0s1gap.npy", E)
-
 
 
         if arg.plot == "gap":
@@ -392,6 +392,12 @@ def main():
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors-all.dcd', top = topology)
 
+        elif socket.gethostname() == "berzelius002" and arg.analyze == 'all':
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors-all.dcd', top = topology)
+
 
         # ON BERZELIUS
         else:
@@ -456,7 +462,7 @@ def main():
             #plt.show(block = True)
             plt.close()
 
-        if arg.analyze == "torsion" or arg.analyze == "all":
+        if arg.analyze == "torsion":
             """"
             Compute the torsion 
             """
@@ -633,7 +639,7 @@ def main():
             #plt.show(block = True)
             plt.close()
 
-        if arg.analyze == "torsonly":
+        if arg.analyze == "torsonly" or arg.analyze == "all":
             """"
             Save I- P-torsion to file
             """
@@ -858,7 +864,15 @@ def main():
         # ON MACMINI
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
             import hbond as hb
-            traj = md.load_dcd('coors.dcd', top = topology)
+            #traj = md.load_dcd('coors.dcd', top = topology)
+            traj = md.load_dcd('prod.dcd', top = topology)
+        
+        elif socket.gethostname() == "berzelius002":
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors-all.dcd', top = topology)
+
         else:
         # ON BERZELIUS
             sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
@@ -878,6 +892,18 @@ def main():
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
             print('-- DONE --')
 
+
+        # SET RELEVANT HB TO BE ANALYZED
+        if arg.name == 'OK':
+            relevant_hbs=['GYC60-OK']
+            name='OK'
+        elif arg.name == 'Iring':
+            relevant_hbs=['GYC60-OA','GYC60-NB']
+            name='Iring'
+        else:
+            relevant_hbs=['GYC60-OA','GYC60-OK','GYC60-NB','GYC60-HD','GYC60-HG','GYC60-HI','GYC60-HH','GYC60-HF']
+            name = None
+
         # SET UP THE ARRAY FOR THE HB COUNT
         hb_size=100
         hb_hydrogen_count = np.zeros([(len(traj)), hb_size])
@@ -886,8 +912,13 @@ def main():
         hb_recept_resname = np.empty([(len(traj)), hb_size], dtype = 'S10')
 
         # SAVE INFO FILES 
-        out = open("hydrogen-bonding.dat", 'w')
-        out2 = open("hydrogen-bonding-td.dat", 'w')
+        if name:
+            out = open(f"hydrogen-bonding_{name}.dat", 'w')
+            out2 = open(f"hydrogen-bonding-td_{name}.dat", 'w')
+        else:
+            out = open("hydrogen-bonding_all.dat", 'w')
+            out2 = open("hydrogen-bonding-td_all.dat", 'w')
+
         out2.write("# t (fs) / N_HB /  RES  /  H   / CHROME\n")
 
         print('-- Computing HBs')
@@ -901,6 +932,8 @@ def main():
         try_set=set()
         hb_recept=[]
         try_set_recept=set()
+        
+        
 
         # LOOP OF THE TRAJECTORY FRAMES
         for i in range(len(traj)):
@@ -908,9 +941,16 @@ def main():
             nhb = 0
             # LOOP OVER THE HYDROGEN BONDS LIST
             for hb in hbond[i]:
-                # ONLY HB INVOLVING THE TARGET GYC60
-                if str(traj.topology.atom(hb[2]).residue) == target or  str(traj.topology.atom(hb[0]).residue) == target:
-                                        
+                # OPTIONS
+                # Any HB involving GYC
+                #if str(traj.topology.atom(hb[2]).residue) == target or  str(traj.topology.atom(hb[0]).residue) == target:
+
+                # GYC60 only as HB receptor 
+                #if str(traj.topology.atom(hb[2]).residue) == target:
+
+                # HB involving relevant HB relevant_hbs
+                if str(traj.topology.atom(hb[2])) in relevant_hbs or str(traj.topology.atom(hb[1])) in relevant_hbs:
+
                     # USE SET TO IDENTIFY UNIQUE HB RESIDUES-HYDROGEN AND APPEND TO ARRAY
                     if traj.topology.atom(hb[1]) not in try_set:
                         try_set.add(traj.topology.atom(hb[1]))
@@ -932,6 +972,7 @@ def main():
                         try_set_recept.add(traj.topology.atom(hb[2]))
                         hb_recept.append(str(traj.topology.atom(hb[2])))
 
+
                     # LOOP OVER RECEPTOR RESIDUES
                     for j in range(len(hb_recept)):
                         # IF residue in the list
@@ -944,23 +985,41 @@ def main():
                     out2.write("%6.1f %d %s --- %s --- %s \n" % (i*0.5, nhb, traj.topology.atom(hb[0]), traj.topology.atom(hb[1]), traj.topology.atom(hb[2]) ) )
             out.write("Time = %6.1f fs, Total HB %d \n" % (i*0.5, nhb))
             number_hb.append(nhb)
+
+        out.write("Mean = %6.2f" % np.mean(number_hb))
+        out2.write("Mean = %6.2f" % np.mean(number_hb))
         out.close()
         out2.close()
 
-        # SETUP FIGURE SPECS
+        # SETUP FIGURE 
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, gridspec_kw={'height_ratios': [3, 2, 2]})
         fig.tight_layout()
         fig.set_figheight(12)
         fig.set_figwidth(18)
         plt.subplots_adjust(hspace=0)
 
-        # PLOT THE HB COUNTER
-        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
-        ax1.bar(t,number_hb)
+        # PLOT THE HB COUNTER 
+        # Time in ns
+        t=np.linspace(0, len(hbond)-1, len(hbond))/100
+        
+        # FOR MD ANALYSIS
+        #t=np.linspace(0, len(hbond)-1, len(hbond))
+
+
+        ax1.bar(t,number_hb, width=0.1)
         ax1.set_ylabel("Number of HB")
         ax1.set_xticklabels([])
 
-        custom_xlim=(0, len(hbond)*0.5)
+        if name:
+            np.save(f"hb_number_{name}.npy", number_hb)
+        else:
+            np.save("hb_number_all.npy", number_hb)
+
+        #custom_xlim=(0, len(hbond)*0.5)
+
+        # FOR MD ANALYSIS
+        custom_xlim=(0, len(hbond)/100)
+
         plt.setp((ax1, ax2, ax3), xlim=custom_xlim)
 
         ### PLOT THE RESIDUE-HYDROGEN COUNTER
@@ -972,7 +1031,7 @@ def main():
         r=np.linspace(0, len(hb_res_h)-1, len(hb_res_h))
         X,Y=np.meshgrid(t,r)
         Z=np.transpose(hb_hydrogen_count)
-        
+
         #PLOT THE HB WHILE GROUPING SAME RESIDUES
         #cmap = matplotlib.colors.ListedColormap(['#000000','blue','red'])
         #ax2.set_yticks(r, list(hb_res_h))
@@ -985,7 +1044,6 @@ def main():
         HbH=[]
         for i in range(len(Z)): 
             maxHB=np.max(Z[i,:])
-            #print(i, Z[i,:])
             for j in range(int(maxHB)):
                 HbH.append(hb_res_h[i])
         
@@ -1005,7 +1063,7 @@ def main():
             RowCount += maxHB
         
         # SET UP THE DATA
-        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        #t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
         r=np.linspace(0, len(HbH)-1, len(HbH))
         X,Y=np.meshgrid(t,r)
         Z=HbHCount
@@ -1028,8 +1086,17 @@ def main():
         ax2.set_ylim(-1, len(HbH)+0.4)
         ax2.set_ylabel("Residue-Hydrogen of the HB")
         ax2.set_xlabel("Time (fs)")
+        ax2.set_xticklabels([])
         ax2.scatter(X,Y,Z,c=colors, cmap='gist_rainbow', marker="o", alpha=1)
 
+        if name:
+            np.save(f"hb_donor_x_{name}.npy", X)
+            np.save(f"hb_donor_y_{name}.npy", Y)
+            np.save(f"hb_donor_z_{name}.npy", Z)
+        else:
+            np.save("hb_donor_x_all.npy", X)
+            np.save("hb_donor_y_all.npy", Y)
+            np.save("hb_donor_z_all.npy", Z)
 
         ### PLOT THE HB RECEPTOR 
 
@@ -1038,7 +1105,10 @@ def main():
         hb_recept_count.resize(len(traj), len(hb_recept))
         
         # SET UP THE DATA
-        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        #t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        # FOR MD ANALYSIS
+        #t=np.linspace(0, len(hbond)-1, len(hbond))/100
+
         r=np.linspace(0, len(hb_recept)-1, len(hb_recept))
         X,Y=np.meshgrid(t,r)
         Z=np.transpose(hb_recept_count)
@@ -1075,15 +1145,20 @@ def main():
         for i in range(len(Z)): 
             maxHB=int(np.max(Z[i,:]))
             # LOOP OVER TIME
-            for j in range(len(Z[1,:])):
+            for j in range(len(Z[0,:])):
                 # LOOP NUMBER OF HB 
                 for k in range(int(Z[i,j])):
                     HbRecCount[RowCount+k][j]=10
             RowCount += maxHB
         
         # SET UP THE DATA
-        t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+        #t=np.linspace(0, len(hbond)-1, len(hbond))*0.5
+
+        # FOR MD ANALYSIS
+        #t=np.linspace(0, len(hbond)-1, len(hbond))/100
+        
         r=np.linspace(0, len(HbRec)-1, len(HbRec))
+
         X,Y=np.meshgrid(t,r)
         Z=HbRecCount
 
@@ -1110,12 +1185,24 @@ def main():
         ax3.set_yticks(r, list(HbRec))
         #ax3.legend(handles=legend_elements, ncol=4, loc="upper left")
         ax3.set_ylabel("HB receptor")
-        ax3.set_xlabel("Time (fs)")
+        ax3.set_xlabel("Time (ns)")
         ax3.set_ylim(-1, len(HbRec)+0.6)
         ax3.scatter(X,Y,Z,c=colors, cmap='gist_rainbow', marker="o", alpha=1)
         
+        if name:
+            np.save(f"hb_acceptor_x_{name}.npy", X)
+            np.save(f"hb_acceptor_y_{name}.npy", Y)
+            np.save(f"hb_acceptor_z_{name}.npy", Z)
+        else:
+            np.save("hb_acceptor_x_all.npy", X)
+            np.save("hb_acceptor_y_all.npy", Y)
+            np.save("hb_acceptor_z_all.npy", Z)
+
         # SAVE FIGURE AND EXIT
-        plt.savefig('hb.png')
+        if name:
+            plt.savefig(f'hb_{name}.png')
+        else:
+            plt.savefig('hb_all.png')
         #plt.show(block = True)
         plt.close()
         
@@ -1604,10 +1691,19 @@ def main():
         # SETUP FIG
         fig, ax = plt.subplots()
         
-        files=sorted(glob.iglob('meci-*.dcd'))
+        if arg.meci2 == 's1':
+            files=sorted(glob.iglob('*.dcd'))
+        else:
+            files=sorted(glob.iglob('meci-*.dcd'))
+
         # COLORS
         color = cm.Paired(np.linspace(0, 1, len(files)))
-        
+
+        cmap = plt.get_cmap('jet', 11)
+        z=np.linspace(0,10, 11)
+
+        lbl=np.zeros(11)
+
         label=[]
         I=[]
         P=[]
@@ -1619,7 +1715,7 @@ def main():
             topology = md.load_prmtop(prmtop)
             traj = md.load_dcd(file, top = topology)
             N=len(traj)-1
-            N=0
+            #N=0
             # I-torsion
             teta_i = gp.compute_torsion5(traj.xyz[N,chrome,:],i_pair,i_triple)
             # P-torsion
@@ -1628,17 +1724,91 @@ def main():
             teta_pyr = gp.compute_pyramidalization(traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
             
             # Final geometry
-            scatter = ax.scatter(teta_i,teta_p, s=70,  c=teta_pyr, cmap='coolwarm', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            #scatter = ax.scatter(teta_i,teta_p, s=70,  c=teta_pyr, cmap='coolwarm', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
+            if "f20" in file:
+                if lbl[0] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='blue', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40, label="f20")
+                    lbl[0]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='blue', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+                
+            elif "f27" in file:
+                if lbl[1] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='red', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f27")
+                    lbl[1]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='red', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
+            elif "f34" in file:
+                if lbl[2] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='green', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f34")
+                    lbl[2]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='green', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f41" in file:
+                if lbl[3] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='black', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f41")
+                    lbl[3]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='black', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f48" in file:
+                if lbl[4] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='orange', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f48")
+                    lbl[4]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='orange', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f55" in file:
+                if lbl[5] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='yellow', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f55")
+                    lbl[5]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='yellow', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f62" in file:
+                if lbl[6] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='lime', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f62")
+                    lbl[6]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='lime', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
+            elif "f69" in file:
+                if lbl[7] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='pink', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f69")
+                    lbl[7]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='pink', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f76" in file:
+                if lbl[8] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='purple', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f76")
+                    lbl[8]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='purple', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f83" in file:
+                if lbl[9] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='olive', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f83")
+                    lbl[9]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='olive', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            elif "f90" in file:
+                if lbl[10] == 0:
+                    scatter = ax.scatter(teta_i,teta_p, s=100,  c='navy', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40,  label="f90")
+                    lbl[10]=1
+                else:
+                    scatter = ax.scatter(teta_i,teta_p, s=70,  c='navy', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+            #else: 
+            #    scatter = ax.scatter(teta_i,teta_p, s=70,  c='green', alpha=0.7,  edgecolors='black', linewidths=0.5, vmin=-40, vmax=40)
+
+            #colors=['black', 'silver', 'red',  'salmon', 'brown', 'orange', 'gold','yellow', 'olive', 'green', 'lime', 'teal', 'aqua', 'blue', 'navy', 'violet', 'lavender', 'magenta', 'pink', 'purple', 'black']
 
             I.append(teta_i)
             P.append(teta_p)
             PYR.append(teta_pyr)
 
             # Initial geometry
-            #Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
-            #Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
-            #Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
-            #scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
+            Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+            Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+            Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
+            scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
 
             if len(file) == 16: 
                 name=file[5:12]
@@ -1649,12 +1819,12 @@ def main():
             #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
 
             # Connecting line
-            #ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
+            ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
 
         #scatter = ax.scatter(I,P, s=150, c=PYR, cmap='coolwarm', alpha=0.8, vmin=-40, vmax=40)
         
-        cbar=plt.colorbar(scatter)
-        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+        #cbar=plt.colorbar(scatter)
+        #cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
 
         # Related atoms
         i_pair=[6,17]
@@ -1691,13 +1861,13 @@ def main():
         plt.ylim(-120,120)
         plt.xticks(np.arange(-120,121,step=30))
         plt.yticks(np.arange(-120,121,step=30))
-
-
+        plt.legend()
 
         
         
         #plt.title(r"S$_1$-min structures")
-        #plt.savefig('US-init-ALL.png', dpi=300, format='png')
+        
+        plt.savefig('S1min-dyn-all-initXfinal.png', dpi=300, format='png')
 
         plt.show(block = True)
         #plt.close()
@@ -2193,14 +2363,14 @@ def main():
         plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
         plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
         plt.xlim([-110, 110])
-        plt.ylim([-180, 180])
+        plt.ylim([-110, 110])
         #plt.axes().xaxis.set_minor_locator(MultipleLocator(10))
         #plt.axes().yaxis.set_minor_locator(MultipleLocator(10))
         plt.tight_layout()
         
-        plt.savefig('violin.png', dpi=400)
+        plt.savefig(f'violin_{X}_{Y}.png', dpi=400)
         
-        plt.show()
+        #plt.show()
 
     if arg.violin2d == True:
         from matplotlib.ticker import MultipleLocator
@@ -2493,7 +2663,7 @@ def main():
         # SETUP FIG
         fig, ax = plt.subplots()
         
-        mecifiles=sorted(glob.iglob('meci-f20*.dcd'))
+        mecifiles=sorted(glob.iglob('s1min_From_meci*.dcd'))
         # COLORS
         color = cm.Paired(np.linspace(0, 1, len(mecifiles)))
         
@@ -2516,15 +2686,15 @@ def main():
             scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=1)
 
             # FINAL MECI
-            #N=len(MECItraj)-1
-            #MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],i_pair,i_triple)
-            #MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],p_pair,p_triple)
-            #MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
-            #scatter = ax.scatter(MECIteta_i,MECIteta_p, s=100, c=MECIteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
+            N=len(MECItraj)-1
+            MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],i_pair,i_triple)
+            MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],p_pair,p_triple)
+            MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            scatter = ax.scatter(MECIteta_i,MECIteta_p, s=100, c=MECIteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
             
 
             # CONNECTING LINE INIT -> S1
-            #ax.plot([Iteta_i, MECIteta_i], [Iteta_p, MECIteta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
+            ax.plot([Iteta_i, MECIteta_i], [Iteta_p, MECIteta_p], ls="--", lw="0.8", c=".01", alpha=0.1)
 
         
             #cbar=plt.colorbar(scatter)
@@ -2542,7 +2712,7 @@ def main():
         #plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
         plt.show(block = True)
 
-    if arg.test == True:
+    if arg.usdist:
         #sys.path.insert(1, '/Users/rafael/theochem/projects/codes/mdtraj/mdtraj/geometry') 
         import hbond as hb
         import mdtraj as md 
@@ -2554,26 +2724,32 @@ def main():
 
         colors=['black', 'silver', 'red',  'salmon', 'brown', 'orange', 'gold','yellow', 'olive', 'green', 'lime', 'teal', 'aqua', 'blue', 'navy', 'violet', 'lavender', 'magenta', 'pink', 'purple', 'black']
 
+        torsion=arg.usdist
         fig, ax = plt.subplots()
         for count, frame in enumerate(sample):
 
-            Itorsion=np.load(f"i_torsion_w{frame}.npy")
-            Ptorsion=np.load(f"p_torsion_w{frame}.npy")
+            Itorsion=np.load(f"i_torsion_{torsion}{frame}.npy")
+            Ptorsion=np.load(f"p_torsion_{torsion}{frame}.npy")
 
             # PLOT PROPAGATION
             #plt.scatter(Itorsion,Ptorsion, c=colors[count], label=sample[count])
             scatter = ax.scatter(Itorsion,Ptorsion, c=colors[count], label=sample[count])
 
-        fig.set_figheight(5)
-        fig.set_figwidth(7)
+        
+
+
+        fig.set_figheight(7)
+        fig.set_figwidth(9)
 
         #plt.legend(handles=colors, labels=sample, loc='upper left', frameon=False)
-        plt.ylabel('P-torsion')
-        plt.xlabel('I-torsion')
-        plt.title('P-I-Torsion')
-        plt.legend(loc=1, ncol=2)
+        plt.ylabel('P-torsion (deg)')
+        plt.xlabel('I-torsion (deg)')
+        plt.xlim(-110,110)
+        plt.ylim(-110,110)
+        plt.title(f'{torsion}-torsion sampling')
+        plt.legend(loc=1, ncol=2, title='Window  (deg)')
 
-        plt.savefig('US-scatter.png', dpi=300)
+        plt.savefig(f'US-scatter-{torsion}.png', dpi=300)
         plt.show()
 
 if __name__=="__main__":
