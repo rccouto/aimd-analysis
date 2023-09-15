@@ -399,8 +399,7 @@ def main():
             traj = md.load_dcd('coors-all.dcd', top = topology)
 
 
-        # ON BERZELIUS
-        else:
+        elif  socket.gethostname() == "berzelius002":
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
 
@@ -416,6 +415,13 @@ def main():
 
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+
+        # ON BERZELIUS
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors-all.dcd', top = topology)
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -868,15 +874,6 @@ def main():
             traj = md.load_dcd('prod.dcd', top = topology)
         
         elif socket.gethostname() == "berzelius002":
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
-            import geom_param as gp
-            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
-            import hbond as hb
-
-            topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors-all.dcd', top = topology)
-
-        else:
         # ON BERZELIUS
             sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
             import hbond as hb
@@ -894,6 +891,17 @@ def main():
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
             print('-- DONE --')
+
+        else:
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
+            import hbond as hb
+
+            topology = md.load_prmtop('sphere.prmtop')
+            traj = md.load_dcd('coors-all.dcd', top = topology)
+
+        
 
 
         # SET RELEVANT HB TO BE ANALYZED
