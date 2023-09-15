@@ -870,6 +870,9 @@ def main():
         elif socket.gethostname() == "berzelius002":
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
+            import hbond as hb
+
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors-all.dcd', top = topology)
 
