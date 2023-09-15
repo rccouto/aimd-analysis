@@ -202,7 +202,7 @@ def _get_bond_triplets(topology, sur_resname, exclude_water=True, sidechain_only
     nh_donors = get_donors('N', 'H')
     oh_donors = get_donors('O', 'H')
     #ch_donors = get_donors('C', 'H')
-    xh_donors = np.array(nh_donors + oh_donors + ch_donors)
+    #xh_donors = np.array(nh_donors + oh_donors + ch_donors)
     xh_donors = np.array(nh_donors + oh_donors)
 
     if len(xh_donors) == 0:
