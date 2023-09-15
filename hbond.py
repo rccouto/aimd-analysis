@@ -114,7 +114,7 @@ def wernet_nilsson(traj, target, exclude_water=True, periodic=True, sidechain_on
     ----------
     .. [1] Wernet, Ph., L.G.M. Pettersson, and A. Nilsson, et al.
        "The Structure of the First Coordination Shell in Liquid Water." (2004)
-       Science 304, 995-999.
+       Science 304, 995-999.   d
     """
 
     distance_cutoff = 0.33
