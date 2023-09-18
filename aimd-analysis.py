@@ -396,7 +396,10 @@ def main():
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors-all.dcd', top = topology)
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+            del traj1,traj2
 
         # ON BERZELIUS
         else:
@@ -923,8 +926,6 @@ def main():
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
             print('-- DONE --')
         """
-
-            
 
 
         # SET RELEVANT HB TO BE ANALYZED
