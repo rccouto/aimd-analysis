@@ -129,7 +129,7 @@ def wernet_nilsson(traj, target, exclude_water=True, periodic=True, sidechain_on
     # Get the target surroundings
     SELEC=f'resname {target[0:3]}'
     chrome = traj.topology.select(SELEC)
-    sur_resname = compute_neighbours(traj,chrome, 0.5, True)
+    sur_resname = compute_neighbours(traj, chrome, 0.5, True)
 
     # Get the possible donor-hydrogen...acceptor triplets
     bond_triplets = _get_bond_triplets(traj.topology, sur_resname,
@@ -267,17 +267,18 @@ def _compute_bounded_geometry(traj, triplets, distance_cutoff, distance_indices,
     return mask, distances, angles
 
 def compute_neighbours (pdb, query_idxs, cutoff, water):
-  """
-  Determine which residues are within cutoff of query indices
-  """
-  neighbour_resnames=set()
-  neighbour_atoms = md.compute_neighbors(pdb, cutoff, query_idxs)
-
-  for atom_idx in neighbour_atoms[0]:
-    resname =  pdb.topology.atom(atom_idx).residue
-    neighbour_resnames.add(str(resname))
-
-  return list(neighbour_resnames)
+    """
+    Determine which residues are within cutoff of query indices
+    """
+    neighbour_resnames=set()
+    neighbour_atoms = md.compute_neighbors(pdb, cutoff, query_idxs)
+    
+    for i in range(len(neighbour_atoms)):
+        for atom_idx in neighbour_atoms[i]:
+            resname =  pdb.topology.atom(atom_idx).residue
+            neighbour_resnames.add(str(resname))
+    
+    return list(neighbour_resnames)
 
 def _get_or_minus1(f):
     try:

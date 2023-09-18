@@ -403,7 +403,10 @@ def main():
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors-all.dcd', top = topology)
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+            del traj1,traj2
 
         """
         elif  socket.gethostname() == "berzelius002":
@@ -799,6 +802,7 @@ def main():
             traj=traj[0]
 
             chrome = traj.topology.select('resname GYC')
+            print(chrome)
             sur_resids, sur_resname = compute_neighbors(traj,chrome,0.4, True)
 
             out = open("closest-atoms-indexes.dat", 'w')
@@ -864,6 +868,7 @@ def main():
         #################
         ## TARGET RESIDUE
         target='GYC60'
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
         #################
 
         # LOAD TRAJECTORIE(S)
@@ -874,7 +879,17 @@ def main():
             import hbond as hb
             #traj = md.load_dcd('coors.dcd', top = topology)
             traj = md.load_dcd('prod.dcd', top = topology)
-        
+
+        # ON BERZELIUS
+        elif socket.gethostname() == "berzelius002":
+            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            import geom_param as gp
+            topology = md.load_prmtop('sphere.prmtop')
+            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+            traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+            del traj1,traj2
+
         else:
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
@@ -883,6 +898,8 @@ def main():
 
             topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('coors-all.dcd', top = topology)
+
+
 
         """
         elif socket.gethostname() == "berzelius002":
@@ -905,9 +922,7 @@ def main():
             print('-- DONE --')
         """
 
-        
-
-        
+            
 
 
         # SET RELEVANT HB TO BE ANALYZED
