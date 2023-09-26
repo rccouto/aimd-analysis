@@ -1,6 +1,6 @@
 import mdtraj as md
 import numpy as np
-import socket
+import socket, sys
 import matplotlib
 import matplotlib.colors
 import matplotlib.pyplot as plt
