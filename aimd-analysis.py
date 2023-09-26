@@ -289,6 +289,7 @@ def main():
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
     f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
+    f.add_option('--rdf' , action="store_true",  default=False, help='Radial distribution function.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -1420,8 +1421,9 @@ def main():
             for sr in sur_resname:
                 if sr not in surr_res:
                     surr_res.add(str(sr))
-        
+    
         print(list(surr_res))
+
 
     if arg.minima:
         import mdtraj as md 
@@ -2790,6 +2792,100 @@ def main():
 
         plt.savefig(f'US-scatter-{torsion}.png', dpi=300)
         plt.show()
+
+    if arg.rdf == True:
+        import MDAnalysis as mda
+        from MDAnalysis.tests.datafiles import PSF, DCD, GRO, XTC
+        from MDAnalysis.analysis import rdf, distances
+        from matplotlib.ticker import MultipleLocator
+        import numpy as np
+        import seaborn as sns
+
+        import warnings
+        # suppress some MDAnalysis warnings about PSF files
+        warnings.filterwarnings('ignore')
+
+        from matplotlib import pyplot as plt
+
+        u=mda.Universe('sphere.prmtop', 'all_opt.dcd')
+
+        gyc=u.select_atoms('resname GYC and resid 61')
+        print(gyc)
+
+        residues=set()
+        for ts in u.trajectory:
+            res=u.select_atoms('around 3 resid 61')        
+            for r in res:
+                residues.add(r.resid)
+
+
+        X=np.linspace(0, len(u.trajectory)-1, len(u.trajectory))
+
+        clr = 'r',
+        edgeclr = 'darkred'
+
+        fig, ax = plt.subplots()
+        ### COM DISTANCE
+        #x=[]
+        #y=[]
+        for count, residue in enumerate(residues):
+
+            com_dist=[]
+            for ts in u.trajectory:
+                gyc_com = gyc.center_of_mass(compound='residues')
+                res=u.select_atoms(f'resid {residue}')
+                res_com = res.center_of_mass(compound='residues')
+
+                dist_arr = distances.distance_array(gyc_com, res_com, box=u.dimensions)
+                com_dist.append(float(dist_arr[0]))
+
+
+            sns.violinplot(y=com_dist)
+            sns.violinplot(y=com_dist)
+            #sns.stripplot(x="day", y="total_bill", data=tips, jitter=True)
+
+            #plt.scatter(ts,com_dist)
+            #parts = plt.violinplot(com_dist,[count],showmedians=True,showextrema=False,widths=1.0)
+            
+            #for partname in ['cmedians']:
+            #    vp = parts[partname]
+            #    vp.set_edgecolor('black')
+            #    vp.set_linewidth(0.5)
+            #for pc in parts['bodies']:
+            #    pc.set_facecolor(clr)
+            #    pc.set_alpha(0.8)
+            #    pc.set_linewidth(0.5)
+            #    pc.set_edgecolor(edgeclr)
+            #    pc.set_edgecolor('k')
+        
+        #r=np.linspace(0, len(residues)-1, len(residues))
+        #ax.set_xticks(r, list(residues))
+        plt.show()
+            #plt.scatter(ts.frame, dist_arr[0,:])
+
+        #    x.append(ts.frame)
+        #    y.append(dist_arr[0,0])
+            #print(ts.frame, dist_arr[0,0])
+
+            #print(dist_arr)
+
+        #fig, ax = plt.subplots()
+        #plt.plot(x,y)
+        #plt.show()
+        #
+        #im = ax.imshow(dist_arr, origin='upper')
+
+        #plt.show()
+
+
+        # LOAD TRAJECTORIE(S)
+        #topology = md.load_prmtop('sphere.prmtop')
+
+        # ON MACMINI
+        #if socket.gethostname() == "rcc-mac.kemi.kth.se":
+        #    traj = md.load_dcd('coors.dcd', top = topology)
+
+        #md.compute_rdf(traj, [[938,939], [938,940]])
 
 if __name__=="__main__":
     main()
