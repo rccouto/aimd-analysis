@@ -35,6 +35,24 @@ if socket.gethostname() == "rcc-mac.kemi.kth.se":
     #traj = md.load_dcd('coors.dcd', top = topology)
     traj = md.load_dcd('prod.dcd', top = topology)
 
+elif socket.gethostname() == "nhlist-desktop":
+    sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param') 
+    import hbond as hb
+
+    traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+    traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+    traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+    traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+    traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+    traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+    traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+    traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+
+    print('-- Combining trajectories')
+    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+    del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+    print('-- DONE --')
+
 elif socket.gethostname() == "berzelius002":
 # ON BERZELIUS
     sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/aimd-analysis/')
