@@ -252,7 +252,6 @@ def readxyz(filename):
     return (xyzarr, atomnames)
 
 
-
 # MAIN PROGRAM
 def main():
     import sys
@@ -264,7 +263,7 @@ def main():
     f.add_option('-a', '--analyze', type = str, default = None, help='Analyze trajectory from Terachem dynamics. Modules available: "hoop" (Pyramidalization angle) \n "rotation" (S-H rotation angle) \n "torsonly" (Save I- P-torsion to file)') 
     f.add_option('--hb' , action="store_true",  default=False, help='Monitor the Hydrogen bonding')
     f.add_option('--plot' , type = str,  default = None, help='Plot with matplotlib.')
-    f.add_option('--dist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
+    f.add_option('--closedist' , action="store_true",  default = False, help='Check the closest distance between residues and the chromophore.')
     f.add_option('--td' , action="store_true",  default = False, help='Flag for time-dependent analysis.')
     f.add_option('--name' , type = str, default = None, help='Name to be used in the output files/figures.')
     f.add_option('--spc' , type = str, default = None, help='Extract structures from trajectory for single point calculations. Module: run and get')
@@ -289,7 +288,10 @@ def main():
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
     f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
-    f.add_option('--rdf' , action="store_true",  default=False, help='Radial distribution function.')
+    f.add_option('--com' , action="store_true",  default=False, help='Center of mass analysis')
+    f.add_option('--file' , type=str,  default=None, help='Given file.')
+    f.add_option('--projplane' , action="store_true",  default=False, help='Projection of atom positions on a plane')
+    f.add_option('--distances' , action="store_true",  default = False, help='Plot distances.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -600,7 +602,10 @@ def main():
 
         if arg.analyze == "distance":
             
-            table=read_table("closest-atoms-indexes.dat")
+            if arg.file:
+                table=read_table(arg.file)
+            else:    
+                table=read_table("closest-atoms-indexes.dat")
             #print(table)
 
             # Compute and plot the distance between two given atoms
@@ -618,7 +623,7 @@ def main():
                 
                 dist = md.compute_distances(traj,pair)
                 # Save distance
-                np.save(data_name,np.array(dist))
+                #np.save(data_name,np.array(dist))
 
                 T=np.linspace(0,len(dist)/2,len(dist))
 
@@ -702,8 +707,8 @@ def main():
             plt.close()
 
             #  Plot I- and P-torsion together
-            plt.plot(t,i_torsion, label="P-torsion")
-            plt.plot(t,p_torsion, label="I-torsion")
+            plt.plot(t,i_torsion, label="I-torsion")
+            plt.plot(t,p_torsion, label="P-torsion")
             plt.ylabel('Dihedral angle (deg)')
             plt.xlabel('Time (fs)')
             plt.title('P- and I- Dihedral angle')
@@ -732,7 +737,7 @@ def main():
 
     
 
-    if arg.dist == True:
+    if arg.closedist == True:
         import mdtraj as md
         import numpy as np
         import socket
@@ -757,10 +762,23 @@ def main():
             traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
             del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
+
+        Pring=['GYC60-OK', 'GYC60-FF', 'GYC60-FI', 'GYC60-FH', 'GYC60-HG']
+        Bridge=['GYC60-HD']
+        Iring=['GYC60-OA', 'GYC60-NB']
+
         if arg.td == True:
             chrome = traj.topology.select('resname GYC')
-            out = open("closest-atoms-indexes-NEW.dat", 'w')
-            out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+
+            out1 = open("closest-residues-Pring.dat", 'w')
+            out2 = open("closest-residues-Bridge.dat", 'w')
+            out3 = open("closest-residues-Iring.dat", 'w')
+            out4 = open("closest-residues-All.dat", 'w')
+
+            out1.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out2.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out3.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out4.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
 
             print("Closest atom from a residue to the chromophore\n")
             print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
@@ -796,11 +814,20 @@ def main():
                         res_element=trj.topology.atom(a1).element
                         chrm_element=trj.topology.atom(a2)
 
-                        if d > 0.0:
-                            print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
-                            out.write("%s %d %d\n" % (resname, a1, a2))
+                        if d > 0.0 and str(chrm_element) in Pring:
+                            out1.write("%s %d %d\n" % (resname, a1, a2))
+                        elif d > 0.0 and str(chrm_element) in Bridge:
+                            out2.write("%s %d %d\n" % (resname, a1, a2))
+                        elif d > 0.0 and str(chrm_element) in Iring:
+                            out3.write("%s %d %d\n" % (resname, a1, a2))
+                        
+                        print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                        out4.write("%s %d %d\n" % (resname, a1, a2))
 
-            out.close()
+            out1.close()
+            out2.close()
+            out3.close()
+            out4.close()
 
         else:
             # Use just the first frame for this analyis
@@ -1563,7 +1590,7 @@ def main():
         
         frame=[arg.meci]
         
-        type=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
+        type1=['Imax', 'Imin', 'Pmax', 'Pmin', 'PImax']
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
@@ -1581,7 +1608,7 @@ def main():
         fig, ax = plt.subplots()
         # COLORS
         if TYPE == "ics":
-            color = cm.Paired(np.linspace(0, 1, len(type)))
+            color = cm.Paired(np.linspace(0, 1, len(type1)))
             markers=['o', 's', '^', '*', 'D']
         else:
             color = cm.Paired(np.linspace(0, 1, len(frame)))
@@ -1592,7 +1619,7 @@ def main():
             I=[]
             P=[]
             PYR=[]
-            for tp, c2, mk in zip(type, color, markers):
+            for tp, c2, mk in zip(type1, color, markers):
 
                 topology = md.load_prmtop(f'meci-f{fm}-{tp}.prmtop')
                 traj = md.load_dcd(f'meci-f{fm}-{tp}.dcd', top = topology)
@@ -1631,11 +1658,11 @@ def main():
            
         if TYPE == "ics":
             cmap = plt.cm.coolwarm
-            legend_elements = [Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[0], marker=markers[0], markersize=10),
-                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[1], marker=markers[1], markersize=10),
-                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[2], marker=markers[2], markersize=10),
-                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[3], marker=markers[3], markersize=15),
-                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type[4], marker=markers[4], markersize=10),
+            legend_elements = [Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type1[0], marker=markers[0], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type1[1], marker=markers[1], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type1[2], marker=markers[2], markersize=10),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type1[3], marker=markers[3], markersize=15),
+                            Line2D([0], [0], color='w', markerfacecolor=cmap(0.), label=type1[4], marker=markers[4], markersize=10),
                             Line2D([0], [0], color='w', markeredgecolor='black', markerfacecolor='w', label='Init. geom.', marker='s', markersize=10)
                             ]
             plt.legend(handles=legend_elements, frameon=False)
@@ -2793,99 +2820,594 @@ def main():
         plt.savefig(f'US-scatter-{torsion}.png', dpi=300)
         plt.show()
 
-    if arg.rdf == True:
+    if arg.com == True:
         import MDAnalysis as mda
-        from MDAnalysis.tests.datafiles import PSF, DCD, GRO, XTC
         from MDAnalysis.analysis import rdf, distances
         from matplotlib.ticker import MultipleLocator
+        from matplotlib import pyplot as plt
         import numpy as np
         import seaborn as sns
-
+        import mdtraj as md 
         import warnings
+        import cmcrameri.cm as cmc
+        from matplotlib.cm import ScalarMappable
+
+        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        import geom_param as gp
+        
         # suppress some MDAnalysis warnings about PSF files
         warnings.filterwarnings('ignore')
 
-        from matplotlib import pyplot as plt
+        #################
+        #dcd='all_opt.dcd'
+        #prmtop='sphere.prmtop'
+        #dcd='s1dyn_Htfdronpra2_f27.dcd'
+        #prmtop='s1dyn_Htfdronpra2_f27.prmtop'
+        #dcd='s1dyn_f27.dcd'
+        #prmtop='s1dyn_f27.prmtop'
+        #dcd='meci-f27-I-70.dcd'
+        #prmtop='meci-f27-I-70.prmtop'
+        dcd='coors.dcd'
+        prmtop='sphere.prmtop'
+        #################
 
-        u=mda.Universe('sphere.prmtop', 'all_opt.dcd')
+        #u=mda.Universe('sphere.prmtop', dcd)
+        u=mda.Universe(prmtop, dcd)
 
-        gyc=u.select_atoms('resname GYC and resid 61')
-        print(gyc)
 
-        residues=set()
-        for ts in u.trajectory:
-            res=u.select_atoms('around 3 resid 61')        
-            for r in res:
-                residues.add(r.resid)
+        
 
+        pring=u.atoms[[948, 949, 951, 953, 955, 957]]
+        his190=u.atoms[[2993,2994,2996,2998,3000]]
+        trp86=u.atoms[[1367,1368,1370,1372,1374,1376]]
+
+        #ok=u.atoms[[958]]
+        #ser=u.atoms[[2186]]
+        #h2o=u.atoms[[6990]]
+
+        """
+        residue_list=[2988, # HIS_190
+               878,  # THR_58
+               3023, # ILE_192
+               956,  # FI
+               950,  # FH
+               947,  # HD (Bridge)
+               946,  # CD (Bridge)
+               3284, # GLU_208
+               2205, # GLU_141
+               [989,943],  # ARG_63_N1->GYC-OA
+               [992,943],  # ARG_63_N2->GYC-OA
+               [1413,943], # ARG_88_N2->GYC-OA
+               [1410,943],  # ARG_88_N1->GYC-OA
+               ]
+        """
+        residue_list=[
+               [989,943],  # ARG_63_N1->GYC-OA
+               [992,943],  # ARG_63_N2->GYC-OA
+               [1413,943], # ARG_88_N2->GYC-OA
+               [1410,943],  # ARG_88_N1->GYC-OA
+               ]
+
+        #topology = md.load_prmtop(prmtop)
+        #traj = md.load_dcd(dcd, top = topology)
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        traj=u.atoms[[chrome]]
+
+        # Radian to degrees
+        r2d=57.2958
+        p_torsion=[]
+        i_torsion=[]
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+        DCOM=[]
+        serHB=[]
+        h2oHB=[]
+
+        residues_dist=np.zeros([len(residue_list), len(u.trajectory)])
+        
+        for i, _ in enumerate(u.trajectory):
+
+            pring_com = pring.center_of_mass(compound='group')
+            his190_com = his190.center_of_mass(compound='group')
+            trp86_com = trp86.center_of_mass(compound='group')
+    
+            #print(gyc_com, hip_com)
+            dist_com = distances.distance_array(pring_com, his190_com, box=u.dimensions)
+            DCOM.append(float(dist_com[0]))
+
+            dist_h2o=distances.distance_array(ok, h2o, box=u.dimensions)
+            h2oHB.append(float(dist_h2o[0]))
+            dist_ser=distances.distance_array(ok, ser, box=u.dimensions)
+            serHB.append(float(dist_ser[0]))
+
+            for j, res in enumerate(residue_list):
+                atom1 = u.atoms[[res[0]]]
+                atom2 = u.atoms[[res[1]]]
+                residues_dist[j][i] = distances.distance_array(atom1, atom2, box=u.dimensions)
+                
+            # Compute the I- and P-torsion angles          
+            # I-torsion
+            #teta = gp.compute_torsion5(traj.xyz[count,chrome,:],i_pair,i_triple)
+            #print(traj.positions)
+            teta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
+            i_torsion.append(teta)
+            
+            # P-torsion
+            #teta = gp.compute_torsion5(traj.xyz[count,chrome,:],p_pair,p_triple)
+            teta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
+            p_torsion.append(teta)
+
+        #fig, ax = plt.subplots()
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
         X=np.linspace(0, len(u.trajectory)-1, len(u.trajectory))
 
-        clr = 'r',
-        edgeclr = 'darkred'
+        #ax=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, alpha=0.5, palette=cmc.hawaii, sizes=X, s=100, legend=False)
+        #ax=sns.kdeplot(x=i_torsion, y=DCOM, fill=True, alpha=0.5)
+        ax1=sns.jointplot(x=i_torsion, y=DCOM, kind='kde', color='purple', alpha=0.5)
+        ax1=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+
+        ax1.set(xlabel=r"$\phi_P$ (deg)", ylabel=r"$R_{P-ring - HIP}$ ($\AA$)")
+
+        #Colormap for comparison
+        cmap = plt.get_cmap(cmc.hawaii)
+        norm = plt.Normalize(X[0],X[-1])
+        sm =  ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax1)
+        plt.savefig('cm.png')
+
+        ax2=sns.jointplot(x=i_torsion, y=serHB, kind='kde', color='purple', alpha=0.5)
+        ax2=sns.scatterplot(x=i_torsion, y=serHB, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+        
+        #Colormap for comparison
+        #cmap = plt.get_cmap(cmc.hawaii)
+        #norm = plt.Normalize(X[0],X[-1])
+        #sm =  ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax2)
+        plt.savefig('serHB.png')
+        
+        ax3=sns.jointplot(x=i_torsion, y=h2oHB, kind='kde', color='purple', alpha=0.5)
+        ax3=sns.scatterplot(x=i_torsion, y=h2oHB, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+        
+        #Colormap for comparison
+        #cmap = plt.get_cmap(cmc.hawaii)
+        #norm = plt.Normalize(X[0],X[-1])
+        #sm =  ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax3)
+        plt.savefig('h2oHB.png')
+
+        #plt.show()
 
         fig, ax = plt.subplots()
-        ### COM DISTANCE
-        #x=[]
-        #y=[]
-        for count, residue in enumerate(residues):
+        plt.tight_layout()
+        residues_names = ['ARG63-N1_GYC-OA', 'ARG63-N2_GYC-OA', 'ARG88-N2_GYC-OA', 'ARG88-N1_GYC-OA']
 
-            com_dist=[]
-            for ts in u.trajectory:
-                gyc_com = gyc.center_of_mass(compound='residues')
-                res=u.select_atoms(f'resid {residue}')
-                res_com = res.center_of_mass(compound='residues')
+        for i, name in enumerate(residues_names):
 
-                dist_arr = distances.distance_array(gyc_com, res_com, box=u.dimensions)
-                com_dist.append(float(dist_arr[0]))
+            ax=sns.jointplot(x=i_torsion, y=residues_dist[i][:], kind='kde', color='purple', alpha=0.5)
+            ax=sns.scatterplot(x=i_torsion, y=residues_dist[i][:], hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+            ax.set(xlabel=r"$\phi_I$ (deg)", ylabel=fr"Dist. {name} (\AA)")
+
+            #Colormap for comparison
+            cmap = plt.get_cmap(cmc.hawaii)
+            norm = plt.Normalize(X[0],X[-1])
+            sm =  ScalarMappable(norm=norm, cmap=cmap)
+            sm.set_array([])
+            cbar = fig.colorbar(sm, ax=ax)
+            plt.savefig(f'{name}_I.png', bbox_inches="tight")
+            plt.close()
+
+        for i, name in enumerate(residues_names):
+
+            ax=sns.jointplot(x=p_torsion, y=residues_dist[i][:], kind='kde', color='purple', alpha=0.5)
+            ax=sns.scatterplot(x=p_torsion, y=residues_dist[i][:], hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+            ax.set(xlabel=r"$\phi_P$ (deg)", ylabel=fr"Dist. {name} (\AA)")
+
+            #Colormap for comparison
+            cmap = plt.get_cmap(cmc.hawaii)
+            norm = plt.Normalize(X[0],X[-1])
+            sm =  ScalarMappable(norm=norm, cmap=cmap)
+            sm.set_array([])
+            cbar = fig.colorbar(sm, ax=ax)
+            plt.savefig(f'{name}_P.png', bbox_inches="tight")
+            plt.close()
 
 
-            sns.violinplot(y=com_dist)
-            sns.violinplot(y=com_dist)
-            #sns.stripplot(x="day", y="total_bill", data=tips, jitter=True)
+    if arg.distances == True:
+        import MDAnalysis as mda
+        from MDAnalysis.analysis import rdf, distances
+        from matplotlib.ticker import MultipleLocator
+        from matplotlib import pyplot as plt
+        import numpy as np
+        import seaborn as sns
+        import mdtraj as md 
+        import warnings, sys
+        import cmcrameri.cm as cmc
+        from matplotlib.cm import ScalarMappable
 
-            #plt.scatter(ts,com_dist)
-            #parts = plt.violinplot(com_dist,[count],showmedians=True,showextrema=False,widths=1.0)
-            
-            #for partname in ['cmedians']:
-            #    vp = parts[partname]
-            #    vp.set_edgecolor('black')
-            #    vp.set_linewidth(0.5)
-            #for pc in parts['bodies']:
-            #    pc.set_facecolor(clr)
-            #    pc.set_alpha(0.8)
-            #    pc.set_linewidth(0.5)
-            #    pc.set_edgecolor(edgeclr)
-            #    pc.set_edgecolor('k')
+        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        import geom_param as gp
         
-        #r=np.linspace(0, len(residues)-1, len(residues))
-        #ax.set_xticks(r, list(residues))
-        plt.show()
-            #plt.scatter(ts.frame, dist_arr[0,:])
+        # suppress some MDAnalysis warnings about PSF files
+        warnings.filterwarnings('ignore')
 
-        #    x.append(ts.frame)
-        #    y.append(dist_arr[0,0])
-            #print(ts.frame, dist_arr[0,0])
+        #################
+        #dcd='dronpa2_US_I0.dcd'
+        #prmtop='dronpa2_US_I0.prmtop'
+        #################
+        
+        # LOAD TRAJECTORY
+        if arg.dcd2:
+            u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
+        else:
+            u=mda.Universe(arg.top, arg.dcd)
 
-            #print(dist_arr)
+        #u=mda.Universe('sphere.prmtop', dcd)
+        #u=mda.Universe(prmtop, dcd)
 
-        #fig, ax = plt.subplots()
-        #plt.plot(x,y)
-        #plt.show()
-        #
-        #im = ax.imshow(dist_arr, origin='upper')
+        connections=read_table("index_dist.dat")
 
-        #plt.show()
+        pring=u.atoms[[948, 949, 951, 953, 955, 957]]
+        his190=u.atoms[[2993,2994,2996,2998,3000]]
+        trp86=u.atoms[[1367,1368,1370,1372,1374,1376]]
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        traj=u.atoms[[chrome]]
+
+        # Radian to degrees
+        r2d=57.2958
+        p_torsion=[]
+        i_torsion=[]
+        pyra=[]
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+        DCOM=[]
+
+        all_distances=np.zeros([len(connections), len(u.trajectory)])
+        
+        for i, _ in enumerate(u.trajectory):
+
+            pring_com = pring.center_of_mass(compound='group')
+            his190_com = his190.center_of_mass(compound='group')
+            trp86_com = trp86.center_of_mass(compound='group')
+
+            for j, connect in enumerate(connections):
+
+                if connect[1].isdigit():
+                    atom1 = u.atoms[[int(connect[1])]]
+                else:
+                    if connect[1] == 'his190_com':
+                        atom1 = his190_com
+                    elif connect[1] == 'pring_com':
+                        atom1 = pring_com
+                    elif connect[1] == 'trp86_com':
+                        atom1 = trp86_com
+                    else:
+                        print(f"Center of mass {connect[1]} not available.")
+                        sys.exit(1)
+
+                if connect[2].isdigit():
+                    atom2 = u.atoms[[int(connect[2])]]
+                else:
+                    if connect[2] == 'his190_com':
+                        atom2 = his190_com
+                    elif connect[2] == 'pring_com':
+                        atom2 = pring_com
+                    elif connect[2] == 'trp86_com':
+                        atom2 = trp86_com
+                    else:
+                        print(f"Center of mass {connect[2]} not available.")
+                        sys.exit(1)
+
+                all_distances[j][i] = distances.distance_array(reference=atom1, configuration=atom2, box=u.dimensions)
+            
+            # Compute the I- and P-torsion angles          
+            # I-torsion
+            teta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
+            i_torsion.append(teta)
+            # P-torsion
+            teta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
+            p_torsion.append(teta)
+            # Bridge piramidalization
+            teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
+            pyra.append(teta)
+
+    T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+
+    # PLOT INDIVIDUAL CONTRIBUTIONS
+    for i in range(len(connections)):
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
+
+        ax[0].plot(T, all_distances[i][:], label=connections[i][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        if arg.name:
+            ax[0].set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
+        else:
+            ax[0].set_title(f'Distance {connections[i][0]}', fontsize=20)
+        ax[0].set_xticklabels([])
+        ax[0].legend(loc='upper right', framealpha=0.5)
+
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi_P$ (deg)')
+
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
+
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
+        
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
+
+        plt.subplots_adjust(hspace=0)
+        if arg.name:
+            plt.savefig(f'{arg.name}_{connections[i][0]}.png', dpi=300)
+        else:
+            plt.savefig(f'{connections[i][0]}.png', dpi=300)
+        plt.close()
+    
+    ###################################################################
+    # GROUPING ARG88/ARG83
+    fig, ax = plt.subplots(2,1)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
+
+    ax[0].plot(T, all_distances[6][:], label=connections[6][0])
+    ax[0].plot(T, all_distances[7][:], label=connections[7][0])
+    ax[0].plot(T, all_distances[8][:], label=connections[8][0])
+    ax[0].plot(T, all_distances[9][:], label=connections[9][0])
+    #ax[0].plot(T, all_distances[11][:], label=connections[10][0])
+    ax[0].set_ylabel(r'Distance ($\AA$)')
+    ax[0].set_xticklabels([])
+    if arg.name:
+        ax[0].set_title(f'{arg.name}: ARG88/ARG62 - GYC-OA', fontsize=20)
+    else:
+        ax[0].set_title(f'ARG88/ARG62 - GYC-OA', fontsize=20)
+    ax[0].legend(loc='upper right', framealpha=0.5)
+
+    ax[1].plot(T,i_torsion, label='I-torsion')
+    ax[1].plot(T,p_torsion, label='P-torsion')
+    ax[1].set_ylabel(r'$\phi_P$ (deg)')
+    ax[1].set_xlabel('Time (fs)')
+    ax[1].legend(loc='upper left', framealpha=0.5)
+
+    color = 'tab:green'
+    ax2 = ax[1].twinx()
+    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+    ax2.set_ylabel(r'Pyramidalization (deg)')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.legend(loc='upper right', framealpha=0.5)
+
+    ax[0].set_xlim(0,T[-1])
+    ax[1].set_xlim(0,T[-1])
+
+    plt.subplots_adjust(hspace=0)
+    if arg.name:
+        plt.savefig(f'{arg.name}_ARG88_ARG62-GYC_OA.png', dpi=300)
+    else:
+        plt.savefig(f'ARG88_ARG62-GYC_OA.png', dpi=300)
+    #plt.show()
+    plt.close()
+
+    ###################################################################
+    # GROUPING HIS-PRING-THR
+    fig, ax = plt.subplots(2,1)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
+
+    ax[0].plot(T, all_distances[13][:], label=connections[13][0])
+    ax[0].plot(T, all_distances[14][:], label=connections[14][0])
+    ax[0].plot(T, all_distances[15][:], label=connections[15][0])
+    ax[0].set_ylabel(r'Distance ($\AA$)')
+    ax[0].set_xticklabels([])
+    if arg.name:
+        ax[0].set_title(f'{arg.name}: HIS190 - P-RING - THR58', fontsize=20)
+    else:
+        ax[0].set_title(f'HIS190 - P-RING - THR58', fontsize=20)
+
+    ax[0].legend(loc='upper right', framealpha=0.5)
+
+    ax[1].plot(T,i_torsion, label='I-torsion')
+    ax[1].plot(T,p_torsion, label='P-torsion')
+    ax[1].set_ylabel(r'$\phi_P$ (deg)')
+    ax[1].set_xlabel('Time (fs)')
+    ax[1].legend(loc='upper left', framealpha=0.5)
+
+    color = 'tab:green'
+    ax2 = ax[1].twinx()
+    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+    ax2.set_ylabel(r'Pyramidalization (deg)')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.legend(loc='upper right', framealpha=0.5)
+
+    ax[0].set_xlim(0,T[-1])
+    ax[1].set_xlim(0,T[-1])
+
+    plt.subplots_adjust(hspace=0)
+    if arg.name:
+        plt.savefig(f'{arg.name}_HIS190_P-RING_THR58.png', dpi=300)
+    else:
+        plt.savefig(f'HIS190_P-RING_THR58.png', dpi=300)
+    plt.close()
+
+    ###################################################################
+    # GROUPING P-RING_HB
+    fig, ax = plt.subplots(2,1)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
+
+    ax[0].plot(T, all_distances[0][:], label=connections[0][0])
+    ax[0].plot(T, all_distances[1][:], label=connections[1][0])
+    ax[0].plot(T, all_distances[2][:], label=connections[2][0])
+    ax[0].set_ylabel(r'Distance ($\AA$)')
+    ax[0].set_xticklabels([])
+
+    if arg.name:
+        ax[0].set_title(f'{arg.name}: P-RING_HB', fontsize=20)
+    else:
+        ax[0].set_title(f'HIS190 - P-RING_HB', fontsize=20)
+
+    ax[0].legend(loc='upper right', framealpha=0.5)
+
+    ax[1].plot(T,i_torsion, label='I-torsion')
+    ax[1].plot(T,p_torsion, label='P-torsion')
+    ax[1].set_ylabel(r'$\phi_P$ (deg)')
+    ax[1].set_xlabel('Time (fs)')
+    ax[1].legend(loc='upper left', framealpha=0.5)
+
+    color = 'tab:green'
+    ax2 = ax[1].twinx()
+    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+    ax2.set_ylabel(r'Pyramidalization (deg)')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.legend(loc='upper right', framealpha=0.5)
+
+    ax[0].set_xlim(0,T[-1])
+    ax[1].set_xlim(0,T[-1])
+
+    plt.subplots_adjust(hspace=0)
+    if arg.name:
+        plt.savefig(f'{arg.name}_P-RING_HB.png', dpi=300)
+    else:
+        plt.savefig(f'P-RING_HB.png', dpi=300)
+
+    plt.close()
+
+    ###################################################################
+    # GROUPING GLU208_HIS190_GLU141
+    fig, ax = plt.subplots(2,1)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
+
+    ax[0].plot(T, all_distances[3][:], label=connections[3][0])
+    #ax[0].plot(T, all_distances[17][:], label=connections[17][0])
+    ax[0].plot(T, all_distances[4][:], label=connections[4][0])
+    ax[0].set_ylabel(r'Distance ($\AA$)')
+    ax[0].set_xticklabels([])
+
+    if arg.name:
+        ax[0].set_title(f'{arg.name}: GLU208_HIS190_GLU141', fontsize=20)
+    else:
+        ax[0].set_title(f'GLU208_HIS190_GLU141', fontsize=20)
+    
+    ax[0].legend(loc='upper right', framealpha=0.5)
+
+    ax[1].plot(T,i_torsion, label='I-torsion')
+    ax[1].plot(T,p_torsion, label='P-torsion')
+    ax[1].set_ylabel(r'$\phi_P$ (deg)')
+    ax[1].set_xlabel('Time (fs)')
+    ax[1].legend(loc='upper left', framealpha=0.5)
+
+    color = 'tab:green'
+    ax2 = ax[1].twinx()
+    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+    ax2.set_ylabel(r'Pyramidalization (deg)')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.legend(loc='upper right', framealpha=0.5)
+
+    ax[0].set_xlim(0,T[-1])
+    ax[1].set_xlim(0,T[-1])
+
+    plt.subplots_adjust(hspace=0)
+
+    if arg.name:
+        plt.savefig(f'{arg.name}_GLU208_HIS190_GLU141.png', dpi=300)
+    else:
+        plt.savefig(f'GLU208_HIS190_GLU141.png', dpi=300)
+
+    plt.close()
+
+    ###################################################################
+    # GROUPING PHE170_ARG88_TRP86
+    fig, ax = plt.subplots(2,1)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
+
+    ax[0].plot(T, all_distances[11][:], label=connections[11][0])
+    ax[0].plot(T, all_distances[12][:], label=connections[12][0])
+    ax[0].plot(T, all_distances[18][:], label=connections[18][0])
+    ax[0].set_ylabel(r'Distance ($\AA$)')
+    ax[0].set_xticklabels([])
+
+    if arg.name:
+        ax[0].set_title(f'{arg.name}: PHE170_ARG88_TRP86', fontsize=20)
+    else:
+        ax[0].set_title(f'PHE170_ARG88_TRP86', fontsize=20)
+
+    ax[0].legend(loc='upper right', framealpha=0.5)
+
+    ax[1].plot(T,i_torsion, label='I-torsion')
+    ax[1].plot(T,p_torsion, label='P-torsion')
+    ax[1].set_ylabel(r'$\phi_P$ (deg)')
+    ax[1].set_xlabel('Time (fs)')
+    ax[1].legend(loc='upper left', framealpha=0.5)
+
+    color = 'tab:green'
+    ax2 = ax[1].twinx()
+    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+    ax2.set_ylabel(r'Pyramidalization (deg)')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.legend(loc='upper right', framealpha=0.5)
+
+    ax[0].set_xlim(0,T[-1])
+    ax[1].set_xlim(0,T[-1])
+
+    plt.subplots_adjust(hspace=0)
+
+    if arg.name:
+        plt.savefig(f'{arg.name}_PHE170_ARG88_TRP86.png', dpi=300)
+    else:
+        plt.savefig(f'PHE170_ARG88_TRP86.png', dpi=300)
+    plt.close()
 
 
-        # LOAD TRAJECTORIE(S)
-        #topology = md.load_prmtop('sphere.prmtop')
+    """
+    #fig, ax = plt.subplots()
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
-        # ON MACMINI
-        #if socket.gethostname() == "rcc-mac.kemi.kth.se":
-        #    traj = md.load_dcd('coors.dcd', top = topology)
+    X=np.linspace(0, len(u.trajectory)-1, len(u.trajectory))
 
-        #md.compute_rdf(traj, [[938,939], [938,940]])
+    #ax=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, alpha=0.5, palette=cmc.hawaii, sizes=X, s=100, legend=False)
+    #ax=sns.kdeplot(x=i_torsion, y=DCOM, fill=True, alpha=0.5)
+    ax1=sns.jointplot(x=i_torsion, y=DCOM, kind='kde', color='purple', alpha=0.5)
+    ax1=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+
+    ax1.set(xlabel=r"$\phi_P$ (deg)", ylabel=r"$R_{P-ring - HIP}$ ($\AA$)")
+
+    #Colormap for comparison
+    cmap = plt.get_cmap(cmc.hawaii)
+    norm = plt.Normalize(X[0],X[-1])
+    sm =  ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax1)
+    plt.savefig('cm.png')
+    """
+
+
+
+
+
+
 
 if __name__=="__main__":
     main()
