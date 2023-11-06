@@ -286,6 +286,7 @@ def main():
     f.add_option('--dcd' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd2' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
+    f.add_option('--dcds' , type=list,  default=None, help='Path for the dcd files to be read as a list.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
     f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
     f.add_option('--com' , action="store_true",  default=False, help='Center of mass analysis')
@@ -1285,12 +1286,17 @@ def main():
         
         if arg.spc == 'run':
             # LOAD TRAJECTORIE(S)
-            topology = md.load_prmtop('sphere.prmtop')
-
+            
             # ON MACMINI
             if socket.gethostname() == "rcc-mac.kemi.kth.se":
+                topology = md.load_prmtop('sphere.prmtop')
+                traj = md.load_dcd('coors.dcd', top = topology)
+            # ON NHLIST-DESKTOP
+            elif socket.gethostname() == "nhlist-desktop":
+                topology = md.load_prmtop('sphere.prmtop')
                 traj = md.load_dcd('coors.dcd', top = topology)
             else:
+                topology = md.load_prmtop('sphere.prmtop')
             # ON BERZELIUS
                 traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
                 traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
@@ -2828,10 +2834,13 @@ def main():
         import numpy as np
         import seaborn as sns
         import mdtraj as md 
-        import warnings
+        import warnings, socket
         import cmcrameri.cm as cmc
         from matplotlib.cm import ScalarMappable
 
+
+        #sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
+        
         sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
         import geom_param as gp
         
@@ -3033,7 +3042,10 @@ def main():
         import cmcrameri.cm as cmc
         from matplotlib.cm import ScalarMappable
 
-        sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        if socket.gethostname() == "nhlist-desktop":
+            sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
+        else:
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
         import geom_param as gp
         
         # suppress some MDAnalysis warnings about PSF files
@@ -3087,7 +3099,7 @@ def main():
             for j, connect in enumerate(connections):
 
                 if connect[1].isdigit():
-                    atom1 = u.atoms[[int(connect[1])]]
+                    atom1 = u.atoms[[int(connect[1])]].positions
                 else:
                     if connect[1] == 'his190_com':
                         atom1 = his190_com
@@ -3100,7 +3112,7 @@ def main():
                         sys.exit(1)
 
                 if connect[2].isdigit():
-                    atom2 = u.atoms[[int(connect[2])]]
+                    atom2 = u.atoms[[int(connect[2])]].positions
                 else:
                     if connect[2] == 'his190_com':
                         atom2 = his190_com
@@ -3111,7 +3123,7 @@ def main():
                     else:
                         print(f"Center of mass {connect[2]} not available.")
                         sys.exit(1)
-
+                print(atom1, atom2)
                 all_distances[j][i] = distances.distance_array(reference=atom1, configuration=atom2, box=u.dimensions)
             
             # Compute the I- and P-torsion angles          
