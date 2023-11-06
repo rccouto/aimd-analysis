@@ -1293,8 +1293,8 @@ def main():
                 traj = md.load_dcd('coors.dcd', top = topology)
             # ON NHLIST-DESKTOP
             elif socket.gethostname() == "nhlist-desktop":
-                topology = md.load_prmtop('sphere.prmtop')
-                traj = md.load_dcd('coors.dcd', top = topology)
+                topology = md.load_prmtop('/storage/nhlist/Jones_Dronpa2GFP/Dronpa2/8-aimd/WT/umbrella_sampling/1-sample-I/I90/sphere.prmtop')
+                traj = md.load_dcd('/storage/nhlist/Jones_Dronpa2GFP/Dronpa2/8-aimd/WT/umbrella_sampling/1-sample-I/I90/scr/coors.dcd', top = topology)
             else:
                 topology = md.load_prmtop('sphere.prmtop')
             # ON BERZELIUS
@@ -1320,20 +1320,20 @@ def main():
             # Generate XYZ files for each trajectory frame. 
             for t in range(len(traj)):
                 
-                if (t % 4) == 0:
-                    # File name
-                    xyz = OutName("tfhbdi", "xyz", t)
-                    out=open(xyz, 'w')
+                #if (t % 4) == 0:
+                # File name
+                xyz = OutName("tfhbdi", "xyz", t)
+                out=open(xyz, 'w')
 
-                    out.write('{}\n'.format(len(mol)))
-                    out.write('Frame {}\n'.format(t))
-                    for i in range(len(mol)):
-                        # Check if atom is in the H substitution list
-                        if mol[i] in subH:
-                            out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-                        else:
-                            out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
-                    out.close()
+                out.write('{}\n'.format(len(mol)))
+                out.write('Frame {}\n'.format(t))
+                for i in range(len(mol)):
+                    # Check if atom is in the H substitution list
+                    if mol[i] in subH:
+                        out.write('H\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                    else:
+                        out.write('{}\t{:>2.8f}\t{:>2.8f}\t{:>2.8f}\n'.format(traj.topology.atom(mol[i]).element.symbol,traj.xyz[t,mol[i],0]*10,traj.xyz[t,mol[i],1]*10,traj.xyz[t,mol[i],2]*10))
+                out.close()
 
         elif arg.spc == 'get':
             """
