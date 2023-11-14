@@ -286,7 +286,6 @@ def main():
     f.add_option('--dcd' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd2' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
-    f.add_option('--dcds' , type=list,  default=None, help='Path for the dcd files to be read as a list.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
     f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
     f.add_option('--com' , action="store_true",  default=False, help='Center of mass analysis')
@@ -1976,21 +1975,21 @@ def main():
         pyr_idx= [22,23,24,21]
 
         # SETUP FIG
-        fig, ax = plt.subplots()
+        #fig, ax = plt.subplots()
         
-        s1files=sorted(glob.iglob('s1min-*.dcd'))
+        s1files=sorted(glob.iglob('s1min*.dcd'))
         # COLORS
         color = cm.Paired(np.linspace(0, 1, len(s1files)))
         
         for s1file, c in zip(s1files, color):
             # SETUP FIG
-            #fig, ax = plt.subplots()
+            fig, ax = plt.subplots()
 
             # S1 prmtop
             s1prmtop=s1file.replace(".dcd", ".prmtop")
 
             # MECI FILES
-            mecifile=s1file.replace("s1min-", "meci-")
+            mecifile=s1file.replace("s1min", "meci")
             meciprmtop=mecifile.replace(".dcd", ".prmtop")
 
             # LOAD S1 TRAJECTORY
@@ -2009,17 +2008,15 @@ def main():
             scatter = ax.scatter(Iteta_i,Iteta_p, s=100, c=Iteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40,  edgecolors='black', linewidths=1)
 
             # FINAL S1min
-            N=len(S1traj)-1
-            S1teta_i = gp.compute_torsion5(S1traj.xyz[N,chrome,:],i_pair,i_triple)
-            S1teta_p = gp.compute_torsion5(S1traj.xyz[N,chrome,:],p_pair,p_triple)
-            S1teta_pyr = gp.compute_pyramidalization(S1traj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            S1teta_i = gp.compute_torsion5(S1traj.xyz[-1,chrome,:],i_pair,i_triple)
+            S1teta_p = gp.compute_torsion5(S1traj.xyz[-1,chrome,:],p_pair,p_triple)
+            S1teta_pyr = gp.compute_pyramidalization(S1traj.xyz[-1,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
             scatter = ax.scatter(S1teta_i,S1teta_p, s=100, c=S1teta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
 
             # FINAL MECI
-            N=len(MECItraj)-1
-            MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],i_pair,i_triple)
-            MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[N,chrome,:],p_pair,p_triple)
-            MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[N,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
+            MECIteta_i   = gp.compute_torsion5(MECItraj.xyz[-1,chrome,:],i_pair,i_triple)
+            MECIteta_p   = gp.compute_torsion5(MECItraj.xyz[-1,chrome,:],p_pair,p_triple)
+            MECIteta_pyr = gp.compute_pyramidalization(MECItraj.xyz[-1,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])
             scatter = ax.scatter(MECIteta_i,MECIteta_p, s=100, c=MECIteta_pyr, cmap='coolwarm', alpha=1, vmin=-40, vmax=40)
             #scatter = ax.scatter(MECIteta_i,MECIteta_p, s=10, color='g', alpha=0.9)
             
@@ -2045,18 +2042,19 @@ def main():
         
             #cbar=plt.colorbar(scatter)
             #cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
-            #plt.title(name)
+            plt.title(name)
             plt.xlabel(r"$\phi_I$ (degrees)",fontsize=14)
             plt.ylabel(r"$\phi_P$ (degrees)",fontsize=14)
+            cbar=plt.colorbar(scatter)
+            cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
 
-            #plt.savefig(f's1-meci-{name}.png', dpi=300, format='png')
+            plt.savefig(f's1min-meci-{name}.png', dpi=300, format='png')
             #plt.show(block = True)
-            #plt.close()
+            plt.close()
 
-        cbar=plt.colorbar(scatter)
-        cbar.set_label(r'$\theta_{pyr}$ (degrees)',fontsize=14)
+        
         #plt.savefig(f's1-meci-ALL.png', dpi=300, format='png')
-        plt.show(block = True)
+        #plt.show(block = True)
 
     if arg.sim == True:    
         """
@@ -3137,26 +3135,71 @@ def main():
             teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
             pyra.append(teta)
 
-    T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
 
-    # PLOT INDIVIDUAL CONTRIBUTIONS
-    for i in range(len(connections)):
+        # PLOT INDIVIDUAL CONTRIBUTIONS
+        for i in range(len(connections)):
+            fig, ax = plt.subplots(2,1)
+            fig.set_figheight(10)
+            fig.set_figwidth(15)
+
+            ax[0].plot(T, all_distances[i][:], label=connections[i][0])
+            ax[0].set_ylabel(r'Distance ($\AA$)')
+            if arg.name:
+                ax[0].set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
+            else:
+                ax[0].set_title(f'Distance {connections[i][0]}', fontsize=20)
+            ax[0].set_xticklabels([])
+            ax[0].legend(loc='upper right', framealpha=0.5)
+
+            ax[1].plot(T,i_torsion, label='I-torsion')
+            ax[1].plot(T,p_torsion, label='P-torsion')
+            ax[1].set_ylabel(r'$\phi_P$ (deg)')
+
+            color = 'tab:green'
+            ax2 = ax[1].twinx()
+            ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+            ax2.set_ylabel(r'Pyramidalization (deg)')
+            ax2.tick_params(axis='y', labelcolor=color)
+            ax2.legend(loc='upper right', framealpha=0.5)
+
+            ax[1].set_xlabel('Time (fs)')
+            ax[1].legend(loc='upper left', framealpha=0.5)
+            
+            ax[0].set_xlim(0,T[-1])
+            ax[1].set_xlim(0,T[-1])
+
+            plt.subplots_adjust(hspace=0)
+            if arg.name:
+                plt.savefig(f'{arg.name}_{connections[i][0]}.png', dpi=300)
+            else:
+                plt.savefig(f'{connections[i][0]}.png', dpi=300)
+            plt.close()
+        
+        ###################################################################
+        # GROUPING ARG88/ARG83
         fig, ax = plt.subplots(2,1)
         fig.set_figheight(10)
         fig.set_figwidth(15)
 
-        ax[0].plot(T, all_distances[i][:], label=connections[i][0])
+        ax[0].plot(T, all_distances[6][:], label=connections[6][0])
+        ax[0].plot(T, all_distances[7][:], label=connections[7][0])
+        ax[0].plot(T, all_distances[8][:], label=connections[8][0])
+        ax[0].plot(T, all_distances[9][:], label=connections[9][0])
+        #ax[0].plot(T, all_distances[11][:], label=connections[10][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
-        if arg.name:
-            ax[0].set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
-        else:
-            ax[0].set_title(f'Distance {connections[i][0]}', fontsize=20)
         ax[0].set_xticklabels([])
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: ARG88/ARG62 - GYC-OA', fontsize=20)
+        else:
+            ax[0].set_title(f'ARG88/ARG62 - GYC-OA', fontsize=20)
         ax[0].legend(loc='upper right', framealpha=0.5)
 
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
         ax[1].set_ylabel(r'$\phi_P$ (deg)')
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
         ax2 = ax[1].twinx()
@@ -3165,255 +3208,210 @@ def main():
         ax2.tick_params(axis='y', labelcolor=color)
         ax2.legend(loc='upper right', framealpha=0.5)
 
-        ax[1].set_xlabel('Time (fs)')
-        ax[1].legend(loc='upper left', framealpha=0.5)
-        
         ax[0].set_xlim(0,T[-1])
         ax[1].set_xlim(0,T[-1])
 
         plt.subplots_adjust(hspace=0)
         if arg.name:
-            plt.savefig(f'{arg.name}_{connections[i][0]}.png', dpi=300)
+            plt.savefig(f'{arg.name}_ARG88_ARG62-GYC_OA.png', dpi=300)
         else:
-            plt.savefig(f'{connections[i][0]}.png', dpi=300)
+            plt.savefig(f'ARG88_ARG62-GYC_OA.png', dpi=300)
+        #plt.show()
         plt.close()
-    
-    ###################################################################
-    # GROUPING ARG88/ARG83
-    fig, ax = plt.subplots(2,1)
-    fig.set_figheight(10)
-    fig.set_figwidth(15)
 
-    ax[0].plot(T, all_distances[6][:], label=connections[6][0])
-    ax[0].plot(T, all_distances[7][:], label=connections[7][0])
-    ax[0].plot(T, all_distances[8][:], label=connections[8][0])
-    ax[0].plot(T, all_distances[9][:], label=connections[9][0])
-    #ax[0].plot(T, all_distances[11][:], label=connections[10][0])
-    ax[0].set_ylabel(r'Distance ($\AA$)')
-    ax[0].set_xticklabels([])
-    if arg.name:
-        ax[0].set_title(f'{arg.name}: ARG88/ARG62 - GYC-OA', fontsize=20)
-    else:
-        ax[0].set_title(f'ARG88/ARG62 - GYC-OA', fontsize=20)
-    ax[0].legend(loc='upper right', framealpha=0.5)
+        ###################################################################
+        # GROUPING HIS-PRING-THR
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
 
-    ax[1].plot(T,i_torsion, label='I-torsion')
-    ax[1].plot(T,p_torsion, label='P-torsion')
-    ax[1].set_ylabel(r'$\phi_P$ (deg)')
-    ax[1].set_xlabel('Time (fs)')
-    ax[1].legend(loc='upper left', framealpha=0.5)
+        ax[0].plot(T, all_distances[13][:], label=connections[13][0])
+        ax[0].plot(T, all_distances[14][:], label=connections[14][0])
+        ax[0].plot(T, all_distances[15][:], label=connections[15][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        ax[0].set_xticklabels([])
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: HIS190 - P-RING - THR58', fontsize=20)
+        else:
+            ax[0].set_title(f'HIS190 - P-RING - THR58', fontsize=20)
 
-    color = 'tab:green'
-    ax2 = ax[1].twinx()
-    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
-    ax2.set_ylabel(r'Pyramidalization (deg)')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right', framealpha=0.5)
+        ax[0].legend(loc='upper right', framealpha=0.5)
 
-    ax[0].set_xlim(0,T[-1])
-    ax[1].set_xlim(0,T[-1])
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi_P$ (deg)')
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
 
-    plt.subplots_adjust(hspace=0)
-    if arg.name:
-        plt.savefig(f'{arg.name}_ARG88_ARG62-GYC_OA.png', dpi=300)
-    else:
-        plt.savefig(f'ARG88_ARG62-GYC_OA.png', dpi=300)
-    #plt.show()
-    plt.close()
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
 
-    ###################################################################
-    # GROUPING HIS-PRING-THR
-    fig, ax = plt.subplots(2,1)
-    fig.set_figheight(10)
-    fig.set_figwidth(15)
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
 
-    ax[0].plot(T, all_distances[13][:], label=connections[13][0])
-    ax[0].plot(T, all_distances[14][:], label=connections[14][0])
-    ax[0].plot(T, all_distances[15][:], label=connections[15][0])
-    ax[0].set_ylabel(r'Distance ($\AA$)')
-    ax[0].set_xticklabels([])
-    if arg.name:
-        ax[0].set_title(f'{arg.name}: HIS190 - P-RING - THR58', fontsize=20)
-    else:
-        ax[0].set_title(f'HIS190 - P-RING - THR58', fontsize=20)
+        plt.subplots_adjust(hspace=0)
+        if arg.name:
+            plt.savefig(f'{arg.name}_HIS190_P-RING_THR58.png', dpi=300)
+        else:
+            plt.savefig(f'HIS190_P-RING_THR58.png', dpi=300)
+        plt.close()
 
-    ax[0].legend(loc='upper right', framealpha=0.5)
+        ###################################################################
+        # GROUPING P-RING_HB
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
 
-    ax[1].plot(T,i_torsion, label='I-torsion')
-    ax[1].plot(T,p_torsion, label='P-torsion')
-    ax[1].set_ylabel(r'$\phi_P$ (deg)')
-    ax[1].set_xlabel('Time (fs)')
-    ax[1].legend(loc='upper left', framealpha=0.5)
+        ax[0].plot(T, all_distances[0][:], label=connections[0][0])
+        ax[0].plot(T, all_distances[1][:], label=connections[1][0])
+        ax[0].plot(T, all_distances[2][:], label=connections[2][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        ax[0].set_xticklabels([])
 
-    color = 'tab:green'
-    ax2 = ax[1].twinx()
-    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
-    ax2.set_ylabel(r'Pyramidalization (deg)')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right', framealpha=0.5)
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: P-RING_HB', fontsize=20)
+        else:
+            ax[0].set_title(f'HIS190 - P-RING_HB', fontsize=20)
 
-    ax[0].set_xlim(0,T[-1])
-    ax[1].set_xlim(0,T[-1])
+        ax[0].legend(loc='upper right', framealpha=0.5)
 
-    plt.subplots_adjust(hspace=0)
-    if arg.name:
-        plt.savefig(f'{arg.name}_HIS190_P-RING_THR58.png', dpi=300)
-    else:
-        plt.savefig(f'HIS190_P-RING_THR58.png', dpi=300)
-    plt.close()
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi_P$ (deg)')
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
 
-    ###################################################################
-    # GROUPING P-RING_HB
-    fig, ax = plt.subplots(2,1)
-    fig.set_figheight(10)
-    fig.set_figwidth(15)
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
 
-    ax[0].plot(T, all_distances[0][:], label=connections[0][0])
-    ax[0].plot(T, all_distances[1][:], label=connections[1][0])
-    ax[0].plot(T, all_distances[2][:], label=connections[2][0])
-    ax[0].set_ylabel(r'Distance ($\AA$)')
-    ax[0].set_xticklabels([])
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
 
-    if arg.name:
-        ax[0].set_title(f'{arg.name}: P-RING_HB', fontsize=20)
-    else:
-        ax[0].set_title(f'HIS190 - P-RING_HB', fontsize=20)
+        plt.subplots_adjust(hspace=0)
+        if arg.name:
+            plt.savefig(f'{arg.name}_P-RING_HB.png', dpi=300)
+        else:
+            plt.savefig(f'P-RING_HB.png', dpi=300)
 
-    ax[0].legend(loc='upper right', framealpha=0.5)
+        plt.close()
 
-    ax[1].plot(T,i_torsion, label='I-torsion')
-    ax[1].plot(T,p_torsion, label='P-torsion')
-    ax[1].set_ylabel(r'$\phi_P$ (deg)')
-    ax[1].set_xlabel('Time (fs)')
-    ax[1].legend(loc='upper left', framealpha=0.5)
+        ###################################################################
+        # GROUPING GLU208_HIS190_GLU141
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
 
-    color = 'tab:green'
-    ax2 = ax[1].twinx()
-    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
-    ax2.set_ylabel(r'Pyramidalization (deg)')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right', framealpha=0.5)
+        ax[0].plot(T, all_distances[3][:], label=connections[3][0])
+        #ax[0].plot(T, all_distances[17][:], label=connections[17][0])
+        ax[0].plot(T, all_distances[4][:], label=connections[4][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        ax[0].set_xticklabels([])
 
-    ax[0].set_xlim(0,T[-1])
-    ax[1].set_xlim(0,T[-1])
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: GLU208_HIS190_GLU141', fontsize=20)
+        else:
+            ax[0].set_title(f'GLU208_HIS190_GLU141', fontsize=20)
+        
+        ax[0].legend(loc='upper right', framealpha=0.5)
 
-    plt.subplots_adjust(hspace=0)
-    if arg.name:
-        plt.savefig(f'{arg.name}_P-RING_HB.png', dpi=300)
-    else:
-        plt.savefig(f'P-RING_HB.png', dpi=300)
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi_P$ (deg)')
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
 
-    plt.close()
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
 
-    ###################################################################
-    # GROUPING GLU208_HIS190_GLU141
-    fig, ax = plt.subplots(2,1)
-    fig.set_figheight(10)
-    fig.set_figwidth(15)
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
 
-    ax[0].plot(T, all_distances[3][:], label=connections[3][0])
-    #ax[0].plot(T, all_distances[17][:], label=connections[17][0])
-    ax[0].plot(T, all_distances[4][:], label=connections[4][0])
-    ax[0].set_ylabel(r'Distance ($\AA$)')
-    ax[0].set_xticklabels([])
+        plt.subplots_adjust(hspace=0)
 
-    if arg.name:
-        ax[0].set_title(f'{arg.name}: GLU208_HIS190_GLU141', fontsize=20)
-    else:
-        ax[0].set_title(f'GLU208_HIS190_GLU141', fontsize=20)
-    
-    ax[0].legend(loc='upper right', framealpha=0.5)
+        if arg.name:
+            plt.savefig(f'{arg.name}_GLU208_HIS190_GLU141.png', dpi=300)
+        else:
+            plt.savefig(f'GLU208_HIS190_GLU141.png', dpi=300)
 
-    ax[1].plot(T,i_torsion, label='I-torsion')
-    ax[1].plot(T,p_torsion, label='P-torsion')
-    ax[1].set_ylabel(r'$\phi_P$ (deg)')
-    ax[1].set_xlabel('Time (fs)')
-    ax[1].legend(loc='upper left', framealpha=0.5)
+        plt.close()
 
-    color = 'tab:green'
-    ax2 = ax[1].twinx()
-    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
-    ax2.set_ylabel(r'Pyramidalization (deg)')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right', framealpha=0.5)
+        ###################################################################
+        # GROUPING PHE170_ARG88_TRP86
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
 
-    ax[0].set_xlim(0,T[-1])
-    ax[1].set_xlim(0,T[-1])
+        ax[0].plot(T, all_distances[11][:], label=connections[11][0])
+        ax[0].plot(T, all_distances[12][:], label=connections[12][0])
+        ax[0].plot(T, all_distances[18][:], label=connections[18][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        ax[0].set_xticklabels([])
 
-    plt.subplots_adjust(hspace=0)
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: PHE170_ARG88_TRP86', fontsize=20)
+        else:
+            ax[0].set_title(f'PHE170_ARG88_TRP86', fontsize=20)
 
-    if arg.name:
-        plt.savefig(f'{arg.name}_GLU208_HIS190_GLU141.png', dpi=300)
-    else:
-        plt.savefig(f'GLU208_HIS190_GLU141.png', dpi=300)
+        ax[0].legend(loc='upper right', framealpha=0.5)
 
-    plt.close()
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi_P$ (deg)')
+        ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
 
-    ###################################################################
-    # GROUPING PHE170_ARG88_TRP86
-    fig, ax = plt.subplots(2,1)
-    fig.set_figheight(10)
-    fig.set_figwidth(15)
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
 
-    ax[0].plot(T, all_distances[11][:], label=connections[11][0])
-    ax[0].plot(T, all_distances[12][:], label=connections[12][0])
-    ax[0].plot(T, all_distances[18][:], label=connections[18][0])
-    ax[0].set_ylabel(r'Distance ($\AA$)')
-    ax[0].set_xticklabels([])
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
 
-    if arg.name:
-        ax[0].set_title(f'{arg.name}: PHE170_ARG88_TRP86', fontsize=20)
-    else:
-        ax[0].set_title(f'PHE170_ARG88_TRP86', fontsize=20)
+        plt.subplots_adjust(hspace=0)
 
-    ax[0].legend(loc='upper right', framealpha=0.5)
-
-    ax[1].plot(T,i_torsion, label='I-torsion')
-    ax[1].plot(T,p_torsion, label='P-torsion')
-    ax[1].set_ylabel(r'$\phi_P$ (deg)')
-    ax[1].set_xlabel('Time (fs)')
-    ax[1].legend(loc='upper left', framealpha=0.5)
-
-    color = 'tab:green'
-    ax2 = ax[1].twinx()
-    ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
-    ax2.set_ylabel(r'Pyramidalization (deg)')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.legend(loc='upper right', framealpha=0.5)
-
-    ax[0].set_xlim(0,T[-1])
-    ax[1].set_xlim(0,T[-1])
-
-    plt.subplots_adjust(hspace=0)
-
-    if arg.name:
-        plt.savefig(f'{arg.name}_PHE170_ARG88_TRP86.png', dpi=300)
-    else:
-        plt.savefig(f'PHE170_ARG88_TRP86.png', dpi=300)
-    plt.close()
+        if arg.name:
+            plt.savefig(f'{arg.name}_PHE170_ARG88_TRP86.png', dpi=300)
+        else:
+            plt.savefig(f'PHE170_ARG88_TRP86.png', dpi=300)
+        plt.close()
 
 
-    """
-    #fig, ax = plt.subplots()
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+        """
+        #fig, ax = plt.subplots()
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
-    X=np.linspace(0, len(u.trajectory)-1, len(u.trajectory))
+        X=np.linspace(0, len(u.trajectory)-1, len(u.trajectory))
 
-    #ax=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, alpha=0.5, palette=cmc.hawaii, sizes=X, s=100, legend=False)
-    #ax=sns.kdeplot(x=i_torsion, y=DCOM, fill=True, alpha=0.5)
-    ax1=sns.jointplot(x=i_torsion, y=DCOM, kind='kde', color='purple', alpha=0.5)
-    ax1=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
+        #ax=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, alpha=0.5, palette=cmc.hawaii, sizes=X, s=100, legend=False)
+        #ax=sns.kdeplot(x=i_torsion, y=DCOM, fill=True, alpha=0.5)
+        ax1=sns.jointplot(x=i_torsion, y=DCOM, kind='kde', color='purple', alpha=0.5)
+        ax1=sns.scatterplot(x=i_torsion, y=DCOM, hue=X, markers=X, palette=cmc.hawaii, sizes=X, s=100, legend=False, linewidth=0, alpha=0.8)
 
-    ax1.set(xlabel=r"$\phi_P$ (deg)", ylabel=r"$R_{P-ring - HIP}$ ($\AA$)")
+        ax1.set(xlabel=r"$\phi_P$ (deg)", ylabel=r"$R_{P-ring - HIP}$ ($\AA$)")
 
-    #Colormap for comparison
-    cmap = plt.get_cmap(cmc.hawaii)
-    norm = plt.Normalize(X[0],X[-1])
-    sm =  ScalarMappable(norm=norm, cmap=cmap)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax1)
-    plt.savefig('cm.png')
-    """
+        #Colormap for comparison
+        cmap = plt.get_cmap(cmc.hawaii)
+        norm = plt.Normalize(X[0],X[-1])
+        sm =  ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax1)
+        plt.savefig('cm.png')
+        """
 
 
 
