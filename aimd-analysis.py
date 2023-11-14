@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import cmcrameri.cm as cmc
 import re, optparse, copy, math
 import numpy as np
-import mdtraj as md
 
 
 def get_tc_md_results(file):
@@ -286,6 +285,7 @@ def main():
     f.add_option('--dcd' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd2' , type=str,  default=None, help='Path for the dcd file to be read.')
     f.add_option('--dcd3' , type=str,  default=None, help='Path for the dcd file to be read.')
+    f.add_option('--dcdlist' , type=str,  default=None, help='File containing a dcd path list.')
     f.add_option('--top' , type=str,  default=None, help='Path for the prmtop file to be read.')
     f.add_option('--usdist' , type=str,  default=None, help='Plot the Umbrella Sampling distribution.')
     f.add_option('--com' , action="store_true",  default=False, help='Center of mass analysis')
@@ -3035,8 +3035,7 @@ def main():
         from matplotlib import pyplot as plt
         import numpy as np
         import seaborn as sns
-        import mdtraj as md 
-        import warnings, sys
+        import warnings, sys, socket
         import cmcrameri.cm as cmc
         from matplotlib.cm import ScalarMappable
 
@@ -3057,6 +3056,9 @@ def main():
         # LOAD TRAJECTORY
         if arg.dcd2:
             u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
+        elif arg.dcdlist:
+            dcds = [file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+            u=mda.Universe(arg.top, dcds)
         else:
             u=mda.Universe(arg.top, arg.dcd)
 
@@ -3121,7 +3123,6 @@ def main():
                     else:
                         print(f"Center of mass {connect[2]} not available.")
                         sys.exit(1)
-                print(atom1, atom2)
                 all_distances[j][i] = distances.distance_array(reference=atom1, configuration=atom2, box=u.dimensions)
             
             # Compute the I- and P-torsion angles          
@@ -3414,10 +3415,13 @@ def main():
         """
 
 
+    if arg.test:
 
+        dcds = [file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
 
+        #dcds = read_table(arg.dcdlist)
 
-
+        print(dcds)
 
 if __name__=="__main__":
     main()
