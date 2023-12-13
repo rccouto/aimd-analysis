@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import cmcrameri.cm as cmc
 import re, optparse, copy, math
 import numpy as np
+import mdtraj as md
 
 
 def get_tc_md_results(file):
@@ -743,11 +744,18 @@ def main():
         import socket
 
         # LOAD TRAJECTORIE(S)
-        topology = md.load_prmtop('sphere.prmtop')
+        if arg.top:
+            topology = md.load_prmtop(arg.top)
+        else:
+            topology = md.load_prmtop('sphere.prmtop')            
 
         # ON MACMINI
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
-            traj = md.load_dcd('coors.dcd', top = topology)
+            if arg.dcd:
+                traj = md.load_dcd(arg.dcd, top = topology)
+            else:
+                traj = md.load_dcd('coors.dcd', top = topology)
+            
         else:
         # ON BERZELIUS
             traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
@@ -774,24 +782,26 @@ def main():
             out2 = open("closest-residues-Bridge.dat", 'w')
             out3 = open("closest-residues-Iring.dat", 'w')
             out4 = open("closest-residues-All.dat", 'w')
+            out5 = open("closest-residues-Summary.dat", 'w')
 
             out1.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
             out2.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
             out3.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
             out4.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
 
-            print("Closest atom from a residue to the chromophore\n")
-            print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
+            out5.write("Closest atom from a residue to the chromophore\n")
+            out5.write("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
             
             try_set=set()
             # LOOP OVER EACH FRAME OF THE TRAJECTORY
             for f in range(len(traj)):
-
+                print(f)
                 trj=traj[f]
                 sur_resids, sur_resname = compute_neighbors(trj,chrome,0.4, True)
 
                 # LOOP OVER THE NEIGHBORS 
                 for i in range(len(sur_resids)):
+                    
 
                     if sur_resids[i] not in try_set:
                         try_set.add(sur_resids[i])
@@ -821,13 +831,14 @@ def main():
                         elif d > 0.0 and str(chrm_element) in Iring:
                             out3.write("%s %d %d\n" % (resname, a1, a2))
                         
-                        print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                        out5.write('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
                         out4.write("%s %d %d\n" % (resname, a1, a2))
 
             out1.close()
             out2.close()
             out3.close()
             out4.close()
+            out5.close()
 
         else:
             # Use just the first frame for this analyis
@@ -1767,7 +1778,7 @@ def main():
         if arg.meci2 == 's1':
             files=sorted(glob.iglob('*.dcd'))
         else:
-            files=sorted(glob.iglob('meci-*.dcd'))
+            files=sorted(glob.iglob('meci-f90*.dcd'))
 
         # COLORS
         color = cm.Paired(np.linspace(0, 1, len(files)))
@@ -1878,21 +1889,22 @@ def main():
             PYR.append(teta_pyr)
 
             # Initial geometry
-            Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
-            Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
-            Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
-            scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
+            #Iteta_i = gp.compute_torsion5(traj.xyz[0,chrome,:],i_pair,i_triple)
+            #Iteta_p = gp.compute_torsion5(traj.xyz[0,chrome,:],p_pair,p_triple)
+            #Iteta_pyr = gp.compute_pyramidalization(traj.xyz[0,chrome,:],pyr_idx[0],pyr_idx[1],pyr_idx[2],pyr_idx[3])       
+            #scatter = ax.scatter(Iteta_i,Iteta_p, s=50, c=Iteta_pyr, cmap='coolwarm', alpha=0.9, vmin=-40, vmax=40)
 
-            if len(file) == 16: 
-                name=file[5:12]
-            elif len(file) == 17:
-                name=file[5:13]
-            else:
-                name=file[5:14]
+            #if len(file) == 16: 
+            #    name=file[5:12]
+            #elif len(file) == 17:
+            #    name=file[5:13]
+            #else:
+            #    name=file[5:14]
+            name=file[5:8]
             #ax.annotate(name, (Iteta_i,Iteta_p), fontsize=6)
 
             # Connecting line
-            ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
+            #ax.plot([teta_i, Iteta_i], [teta_p, Iteta_p], ls="--", c=".001", alpha=0.3)
 
         #scatter = ax.scatter(I,P, s=150, c=PYR, cmap='coolwarm', alpha=0.8, vmin=-40, vmax=40)
         
@@ -1908,17 +1920,17 @@ def main():
         Igas=[]
         Pgas=[]
         # READ XYZ STRUCTURES
-        for i in range(len(gasphase)):
-            coords, atoms = readxyz(gasphase[i])
-            # I-torsion
-            teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
-            # P-torsion
-            teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
-            Igas.append(teta_i)
-            Pgas.append(teta_p)
-            LabelName=gasphase[i]
-            label.append(f"GP-{LabelName[7:13]}")
-        scatter = ax.scatter(Igas,Pgas, s=70, color='red', marker='D')
+        #for i in range(len(gasphase)):
+        #    coords, atoms = readxyz(gasphase[i])
+        #    # I-torsion
+        #    teta_i = gp.compute_torsion5(coords,i_pair,i_triple)
+        #    # P-torsion
+        #    teta_p = gp.compute_torsion5(coords,p_pair,p_triple)
+        #    Igas.append(teta_i)
+        #    Pgas.append(teta_p)
+        #    LabelName=gasphase[i]
+        #    label.append(f"GP-{LabelName[7:13]}")
+        #scatter = ax.scatter(Igas,Pgas, s=70, color='red', marker='D')
 
         ax.plot([200, -200], [-200, 200], ls="-", c=".1", alpha=0.2)
         ax.plot([-130,130], [0,0], ls="-", c=".1", alpha=0.1)
@@ -1938,12 +1950,12 @@ def main():
 
         
         
-        #plt.title(r"S$_1$-min structures")
+        plt.title(f"MECI structures - {name}")
         
-        plt.savefig('S1min-dyn-all-initXfinal.png', dpi=300, format='png')
+        plt.savefig(f'MECI-dyn-{name}.png', dpi=300, format='png')
 
-        plt.show(block = True)
-        #plt.close()
+        #plt.show(block = True)
+        plt.close()
 
 
     if arg.s1meci:
@@ -3057,7 +3069,7 @@ def main():
         if arg.dcd2:
             u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
         elif arg.dcdlist:
-            dcds = [file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+            dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
             u=mda.Universe(arg.top, dcds)
         else:
             u=mda.Universe(arg.top, arg.dcd)
