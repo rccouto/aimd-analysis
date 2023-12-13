@@ -758,17 +758,20 @@ def main():
             
         else:
         # ON BERZELIUS
-            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
-            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
-            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
-            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
-            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
-            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
-            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
-            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
+            if arg.dcd:
+                traj = md.load_dcd(arg.dcd, top = topology)
+            else:
+                traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
+                traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
+                traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
+                traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
+                traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
+                traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
+                traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
+                traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
 
-            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
-            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
+                traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
+                del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
 
 
         Pring=['GYC60-OK', 'GYC60-FF', 'GYC60-FI', 'GYC60-FH', 'GYC60-HG']
