@@ -3166,7 +3166,7 @@ def main():
         #T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
         # MD ANALYSIS
-        T=np.linspace(0,len(u.trajectory)-1,len(u.trajectory))/100
+        T=np.linspace(0,len(u.trajectory),len(u.trajectory))/100
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
         for i in range(len(connections)):
@@ -3222,9 +3222,9 @@ def main():
             ax.set_xlabel('Time (ns)')
 
             if arg.name:
-                ax.set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
+                ax.set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=15)
             else:
-                ax.set_title(f'Distance {connections[i][0]}', fontsize=20)
+                ax.set_title(f'Distance {connections[i][0]}', fontsize=15)
             ax.legend(loc='upper right', framealpha=0.5)
 
             ax.set_xlim(0,T[-1])
