@@ -3230,9 +3230,9 @@ def main():
             ax.set_xlim(0,T[-1])
 
             if arg.name:
-                plt.savefig(f'{arg.name}_{connections[i][0]}.png', dpi=300)
+                plt.savefig(f'{arg.name}_{connections[i][0]}_ONLY.png', dpi=300)
             else:
-                plt.savefig(f'{connections[i][0]}.png', dpi=300)
+                plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
 
         ###################################################################
