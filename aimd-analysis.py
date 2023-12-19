@@ -3056,6 +3056,8 @@ def main():
 
         if socket.gethostname() == "nhlist-desktop":
             sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
+        elif socket.gethostname() == "berzelius002":
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
         else:
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
         import geom_param as gp
@@ -3112,6 +3114,7 @@ def main():
             pring_com = pring.center_of_mass(compound='group')
             his190_com = his190.center_of_mass(compound='group')
             trp86_com = trp86.center_of_mass(compound='group')
+            trp136_com = trp136.center_of_mass(compound='group')
 
             for j, connect in enumerate(connections):
 
@@ -3123,6 +3126,8 @@ def main():
                     elif connect[1] == 'pring_com':
                         atom1 = pring_com
                     elif connect[1] == 'trp86_com':
+                        atom1 = trp86_com
+                    elif connect[1] == 'trp136_com':
                         atom1 = trp86_com
                     else:
                         print(f"Center of mass {connect[1]} not available.")
@@ -3137,6 +3142,8 @@ def main():
                         atom2 = pring_com
                     elif connect[2] == 'trp86_com':
                         atom2 = trp86_com
+                    elif connect[2] == 'trp136_com':
+                        atom1 = trp86_com
                     else:
                         print(f"Center of mass {connect[2]} not available.")
                         sys.exit(1)
