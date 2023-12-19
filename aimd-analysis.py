@@ -834,7 +834,7 @@ def main():
                         elif d > 0.0 and str(chrm_element) in Iring:
                             out3.write("%s %d %d\n" % (resname, a1, a2))
                         
-                        out5.write('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                        out5.write('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.2f}\n'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
                         out4.write("%s %d %d\n" % (resname, a1, a2))
 
             out1.close()
@@ -3082,9 +3082,11 @@ def main():
 
         connections=read_table("index_dist.dat")
 
-        pring=u.atoms[[948, 949, 951, 953, 955, 957]]
-        his190=u.atoms[[2993,2994,2996,2998,3000]]
-        trp86=u.atoms[[1367,1368,1370,1372,1374,1376]]
+        pring=u.atoms[[940,941,945,949,947,943]]
+        trp136=u.atoms[[2129,2130,2132,2134,2136,2138]]
+        his190=u.atoms[[2985,2986,2988,2990,2992]]
+        trp86=u.atoms[[1359,1360,1362,1364,1366,1368]]
+        
 
         # Chromophore indices
         chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
