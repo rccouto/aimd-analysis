@@ -3056,7 +3056,7 @@ def main():
 
         if socket.gethostname() == "nhlist-desktop":
             sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
-        elif socket.gethostname() == "berzelius002":
+        elif socket.gethostname() == "berzelius2.nsc.liu.se":
             sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
         else:
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
@@ -3091,7 +3091,10 @@ def main():
         
 
         # Chromophore indices
-        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+        #chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # Chromophore indices - Dronpa2 and TF-Dronpa2 - MUTATION THR58->GLY58
+        chrome=[917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953]
 
         traj=u.atoms[[chrome]]
 
@@ -3160,7 +3163,10 @@ def main():
             teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
             pyra.append(teta)
 
-        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        #T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        
+        # MD ANALYSIS
+        T=np.linspace(0,len(u.trajectory)-1,len(u.trajectory))/100
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
         for i in range(len(connections)):
@@ -3188,7 +3194,11 @@ def main():
             ax2.tick_params(axis='y', labelcolor=color)
             ax2.legend(loc='upper right', framealpha=0.5)
 
-            ax[1].set_xlabel('Time (fs)')
+            #ax[1].set_xlabel('Time (fs)')
+
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+
             ax[1].legend(loc='upper left', framealpha=0.5)
             
             ax[0].set_xlim(0,T[-1])
@@ -3201,6 +3211,30 @@ def main():
                 plt.savefig(f'{connections[i][0]}.png', dpi=300)
             plt.close()
         
+        # PLOT DISTANCE ONLY
+        for i in range(len(connections)):
+            fig, ax = plt.subplots()
+            fig.set_figheight(5)
+            fig.set_figwidth(10)
+
+            ax.plot(T, all_distances[i][:], label=connections[i][0])
+            ax.set_ylabel(r'Distance ($\AA$)')
+            ax.set_xlabel('Time (ns)')
+
+            if arg.name:
+                ax.set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
+            else:
+                ax.set_title(f'Distance {connections[i][0]}', fontsize=20)
+            ax.legend(loc='upper right', framealpha=0.5)
+
+            ax.set_xlim(0,T[-1])
+
+            if arg.name:
+                plt.savefig(f'{arg.name}_{connections[i][0]}.png', dpi=300)
+            else:
+                plt.savefig(f'{connections[i][0]}.png', dpi=300)
+            plt.close()
+
         ###################################################################
         # GROUPING ARG88/ARG83
         fig, ax = plt.subplots(2,1)
