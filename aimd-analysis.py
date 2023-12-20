@@ -929,7 +929,7 @@ def main():
 
         # ON BERZELIUS
         elif socket.gethostname() == "berzelius2.nsc.liu.se":
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             import hbond as hb
 
