@@ -3218,6 +3218,11 @@ def main():
             fig.set_figwidth(10)
 
             ax.plot(T, all_distances[i][:], label=connections[i][0])
+
+            avrg=np.mean(all_distances[i][:])
+
+            ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", alpha=0.1)
+
             ax.set_ylabel(r'Distance ($\AA$)')
             ax.set_xlabel('Time (ns)')
 
