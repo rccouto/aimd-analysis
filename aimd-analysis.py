@@ -918,12 +918,13 @@ def main():
         #################
 
         # LOAD TRAJECTORIE(S)
-        topology = md.load_prmtop('sphere.prmtop')
+        
 
         # ON MACMINI
         if socket.gethostname() == "rcc-mac.kemi.kth.se":
             import hbond as hb
             #traj = md.load_dcd('coors.dcd', top = topology)
+            topology = md.load_prmtop('sphere.prmtop')
             traj = md.load_dcd('prod.dcd', top = topology)
 
         # ON BERZELIUS
