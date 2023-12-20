@@ -927,18 +927,20 @@ def main():
             traj = md.load_dcd('prod.dcd', top = topology)
 
         # ON BERZELIUS
-        elif socket.gethostname() == "berzelius002":
+        elif socket.gethostname() == "berzelius2":
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             import hbond as hb
 
-            topology = md.load_prmtop('sphere.prmtop')
+            #topology = md.load_prmtop('sphere.prmtop')
             
             #traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
             #traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
             #traj=md.join([traj1,traj2], discard_overlapping_frames=True)
             #del traj1,traj2
 
+            # MD ANALYSIS
+            topology = md.load_prmtop('pbc-box.prmtop')
             traj = md.load_dcd('prod.dcd', top = topology)
 
         else:
