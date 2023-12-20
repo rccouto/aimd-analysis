@@ -927,7 +927,7 @@ def main():
             traj = md.load_dcd('prod.dcd', top = topology)
 
         # ON BERZELIUS
-        elif socket.gethostname() == "berzelius2":
+        elif socket.gethostname() == "berzelius2.nsc.liu.se":
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             import hbond as hb
