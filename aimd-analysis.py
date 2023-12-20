@@ -3221,7 +3221,7 @@ def main():
 
             avrg=np.mean(all_distances[i][:])
 
-            ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label=f"mean={avrg}")
+            ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
 
             ax.set_ylabel(r'Distance ($\AA$)')
             ax.set_xlabel('Time (ns)')
