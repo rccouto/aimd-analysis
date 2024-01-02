@@ -261,7 +261,7 @@ def rename_residue(name: str) -> str:
     Returns:
         new_name (str): 1-based residue name + atom
     """
-    split_name=re.split('(\d+)',name)
+    split_name=re.split(r'(\d+)',name)
     
     if len(split_name) > 3:
         new_name=split_name[0] + str((int(split_name[1])+1)) + split_name[2] + split_name[3]
@@ -2211,11 +2211,11 @@ def main():
 
 
                 if j == 0:
-                    axs[j].set_title("Radius < %2.1f $\AA$" % (dist[j]*10), y=1.0, pad=-14)
+                    axs[j].set_title(r"Radius < %2.1f $\AA$" % (dist[j]*10), y=1.0, pad=-14)
                 elif j == len(dist)-1:
-                    axs[j].set_title("Radius > %2.1f $\AA$" % (dist[j-1]*10), y=1.0, pad=-14)
+                    axs[j].set_title(r"Radius > %2.1f $\AA$" % (dist[j-1]*10), y=1.0, pad=-14)
                 else:
-                    axs[j].set_title("%2.1f <  Radius < %2.1f $\AA$" % (dist[j-1]*10, dist[j]*10), y=1.0, pad=-14)
+                    axs[j].set_title(r"%2.1f <  Radius < %2.1f $\AA$" % (dist[j-1]*10, dist[j]*10), y=1.0, pad=-14)
         
                 j+=1
                 prevRes=np.array(resids)
@@ -3107,6 +3107,7 @@ def main():
         import cmcrameri.cm as cmc
         from matplotlib.cm import ScalarMappable
 
+        print(socket.gethostname())
         if socket.gethostname() == "nhlist-desktop":
             sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
         elif socket.gethostname() == "berzelius2.nsc.liu.se":
