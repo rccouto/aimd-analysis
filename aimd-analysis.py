@@ -3114,6 +3114,7 @@ def main():
             sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
         elif socket.gethostname() == "amaze":
             sys.path.insert(1, '/data/users/rcc/codes/tcutil/code/geom_param')
+            print("YES")
         else:
             sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
         import geom_param as gp
@@ -3297,7 +3298,7 @@ def main():
             plt.close()
 
 
-        """
+        r"""
         ###################################################################
         # GROUPING ARG88/ARG83
         fig, ax = plt.subplots(2,1)
