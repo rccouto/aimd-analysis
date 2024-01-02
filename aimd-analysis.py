@@ -113,7 +113,7 @@ def compute_rotation(
     D,
     ):
 
-    """ Compute the 360 rotation-angle property for geometry (in degrees).
+    r""" Compute the 360 rotation-angle property for geometry (in degrees).
 
     Params:
         xyz - the geometry
@@ -251,6 +251,24 @@ def readxyz(filename):
                 i = i + 1
     return (xyzarr, atomnames)
 
+
+def rename_residue(name: str) -> str:
+    """ MDTraj gives a 0-based index residue name. This routine takes a residue-atom full name and add 1 to the residue's index. 
+
+    Args:
+        name (str): 0-based residue name + atom
+
+    Returns:
+        new_name (str): 1-based residue name + atom
+    """
+    split_name=re.split('(\d+)',name)
+    
+    if len(split_name) > 3:
+        new_name=split_name[0] + str((int(split_name[1])+1)) + split_name[2] + split_name[3]
+    else:
+        new_name=split_name[0] + str((int(split_name[1])+1)) + split_name[2]
+
+    return new_name
 
 # MAIN PROGRAM
 def main():
@@ -754,8 +772,13 @@ def main():
             if arg.dcd:
                 traj = md.load_dcd(arg.dcd, top = topology)
             else:
-                traj = md.load_dcd('coors.dcd', top = topology)
-            
+                #traj = md.load_dcd('coors.dcd', top = topology)
+                traj1 = md.load_dcd('f90_01.dcd', top = topology)
+                traj2 = md.load_dcd('f90_02.dcd', top = topology)
+                traj3 = md.load_dcd('f90_03.dcd', top = topology)
+                traj=md.join([traj1,traj2,traj3], discard_overlapping_frames=True)
+                del traj1,traj2,traj3
+
         else:
         # ON BERZELIUS
             if arg.dcd:
@@ -793,12 +816,11 @@ def main():
             out4.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
 
             out5.write("Closest atom from a residue to the chromophore\n")
-            out5.write("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
+            out5.write("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------\n")
             
             try_set=set()
             # LOOP OVER EACH FRAME OF THE TRAJECTORY
             for f in range(len(traj)):
-                print(f)
                 trj=traj[f]
                 sur_resids, sur_resname = compute_neighbors(trj,chrome,0.4, True)
 
@@ -823,9 +845,10 @@ def main():
                                     a1 = atm
                                     a2 = chm
 
-                        resname=trj.topology.atom(a1)
+                        resname= rename_residue(str(trj.topology.atom(a1)))
                         res_element=trj.topology.atom(a1).element
-                        chrm_element=trj.topology.atom(a2)
+                        chrm_element=rename_residue(str(trj.topology.atom(a2)))
+
 
                         if d > 0.0 and str(chrm_element) in Pring:
                             out1.write("%s %d %d\n" % (resname, a1, a2))
@@ -845,48 +868,75 @@ def main():
 
         else:
             # Use just the first frame for this analyis
-            traj=traj[0]
+            traj=traj[-1]
+            flag='final'
 
-            chrome = traj.topology.select('resname GYC')
-            print(chrome)
-            sur_resids, sur_resname = compute_neighbors(traj,chrome,0.4, True)
+            #chrome = traj.topology.select('resname GYC')
+            chrome = [940, 941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958]
 
-            out = open("closest-atoms-indexes.dat", 'w')
-            out.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
-            # Run over the residues surrounding GYC
-            print("Closest atom from a residue to the chromophore\n")
-            print("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------")
+            out1 = open(f"closest-residues-Pring_{flag}.dat", 'w')
+            out2 = open(f"closest-residues-Bridge_{flag}.dat", 'w')
+            out3 = open(f"closest-residues-Iring_{flag}.dat", 'w')
+            out4 = open(f"closest-residues-All_{flag}.dat", 'w')
+            out5 = open(f"closest-residues-Summary_{flag}.dat", 'w')
+            out6 = open(f"index_dist_{flag}.dat", 'w')
+
+            out1.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out2.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out3.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out4.write("# Res_Name / Res_Atom_Id / GYC_Atom_Id\n")
+            out5.write("Closest atom from a residue to the chromophore\n")
+            out5.write("Residue        Index   Chromophore     Index   Dist (AA)\n---------------------------------------------------------\n")
+            out6.write("# CONNECTION           ATOM 1  ATOM 2\n")
+
+            try_set=set()
+            # LOOP OVER EACH FRAME OF THE TRAJECTORY
+   
+            sur_resids, sur_resname = compute_neighbors(traj,chrome,0.5, True)
+
+            # LOOP OVER THE NEIGHBORS 
             for i in range(len(sur_resids)):
-                #print("Get res_ids")
-                res_ids=traj.topology.select('resid %s' % sur_resids[i])
-                #print(sur_resname[i])
+                
 
-                # Run over the atoms within the residue
-                d=10000
-                #print("Run over res_ids", res_ids)
-                for atm in res_ids:
-                    #print("Run over chrome ", atm)
-                    for chm in chrome:
-                        #print("chm", chm)
-                        pair=np.array([[atm,chm]], dtype=np.int32) # P-ring <> HIP190
-                        dist = md.compute_distances(traj,pair)
-                        
-                        if dist < d:
-                            d = dist
-                            a1 = atm
-                            a2 = chm
+                if sur_resids[i] not in try_set:
+                    try_set.add(sur_resids[i])
 
-                resname=traj.topology.atom(a1)
-                res_element=traj.topology.atom(a1).element
-                chrm_element=traj.topology.atom(a2)
+                    res_ids=traj.topology.select('resid %s' % sur_resids[i])
 
-                t=str(resname)
-                #if not t.startswith("H") and d > 0.0:
-                if d > 0.0:
-                    #print('{:<5s}\t({:<8s})\t{:<4d}\tGYC({:<8s})\t{:<5d}\t{:>2.4f}'.format(str(resname), str(res_element), a1, str(chrm_element), a2, float(d*10)))
-                    print('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.4f}'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
-                    out.write("%s %d %d\n" % (resname, a1, a2))
-            out.close()
+                    d=10000
+                    # Run over the atoms within the residue
+                    for atm in res_ids:
+                        for chm in chrome:
+                            pair=np.array([[atm,chm]], dtype=np.int32) 
+                            dist = md.compute_distances(traj,pair)
+                            
+                            if dist < d:
+                                d = dist
+                                a1 = atm
+                                a2 = chm
+
+                    resname= rename_residue(str(traj.topology.atom(a1)))
+                    res_element=traj.topology.atom(a1).element
+                    chrm_element=rename_residue(str(traj.topology.atom(a2)))
+
+                    if d > 0.0 and str(chrm_element) in Pring:
+                        out1.write("%s %d %d\n" % (resname, a1, a2))
+                    elif d > 0.0 and str(chrm_element) in Bridge:
+                        out2.write("%s %d %d\n" % (resname, a1, a2))
+                    elif d > 0.0 and str(chrm_element) in Iring:
+                        out3.write("%s %d %d\n" % (resname, a1, a2))
+                    
+                    out4.write("%s %d %d\n" % (resname, a1, a2))
+                    out5.write('{:<8s}\t{:<5d}\t{:<8s}\t{:<4d}\t{:>2.2f}\n'.format(str(resname),  a1, str(chrm_element), a2, float(d*10)))
+                    if resname != chrm_element:
+                        out6.write('{:<7s}_{:<8s}\t{:<4d}\t{:<4d}\n'.format(resname,  str(chrm_element), a1, a2))
+
+            out1.close()
+            out2.close()
+            out3.close()
+            out4.close()
+            out5.close()
+            out6.close()
 
     if arg.hb == True:
         """" Identify the hydrogen bonds, that involves a given target, 
@@ -2375,7 +2425,7 @@ def main():
         #plt.plot(time,Esp, marker='.')
         #plt.plot((Emd[:,1]-1)/2,Emd[:,0], marker='.', color='r')
         plt.plot(time,D, color='r')
-        plt.ylabel('$\Delta$E Protein/gas-phase (eV)  ')
+        plt.ylabel(r'$\Delta$E Protein/gas-phase (eV)  ')
         plt.xlabel('Time (fs)')
         #plt.title('S0->S1 Oscillator strength')
         plt.savefig("proteinVSgasphase.png", format='png', dpi=300)
@@ -2441,14 +2491,14 @@ def main():
                 pc.set_edgecolor('k')
 
         if X == "I":
-            plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
+            plt.xlabel(r'$\phi_I$ window (degrees)', fontsize=16)
         else:
-            plt.xlabel('$\phi_P$ window (degrees)', fontsize=16)
+            plt.xlabel(r'$\phi_P$ window (degrees)', fontsize=16)
         
         if Y == "I":
-            plt.ylabel('$\phi_I$ samples (degrees)', fontsize=16)
+            plt.ylabel(r'$\phi_I$ samples (degrees)', fontsize=16)
         else:
-            plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+            plt.ylabel(r'$\phi_P$ samples (degrees)', fontsize=16)
         
         plt.xticks(np.arange(-120, 120+1, 20), fontsize=14)
         plt.yticks(np.arange(-180, 180+1, 20), fontsize=14)
@@ -2523,12 +2573,12 @@ def main():
         #if X == "I":
         #    plt.xlabel('$\phi_I$ window (degrees)', fontsize=16)
         #else:
-        plt.xlabel('$\phi_{IP}$ window (degrees)', fontsize=16)
+        plt.xlabel(r'$\phi_{IP}$ window (degrees)', fontsize=16)
         
         if Y == "I":
-            plt.ylabel('$\phi_I$ samples (degrees)', fontsize=16)
+            plt.ylabel(r'$\phi_I$ samples (degrees)', fontsize=16)
         else:
-            plt.ylabel('$\phi_P$ samples (degrees)', fontsize=16)
+            plt.ylabel(r'$\phi_P$ samples (degrees)', fontsize=16)
         
         plt.xticks(np.arange(-110, 110+1, 20), fontsize=14)
         plt.yticks(np.arange(-110, 110+1, 20), fontsize=14)
@@ -3085,7 +3135,7 @@ def main():
         #u=mda.Universe('sphere.prmtop', dcd)
         #u=mda.Universe(prmtop, dcd)
 
-        connections=read_table("index_dist.dat")
+        connections=read_table("index_dist_final.dat")
 
         pring=u.atoms[[940,941,945,949,947,943]]
         trp136=u.atoms[[2129,2130,2132,2134,2136,2138]]
@@ -3243,6 +3293,8 @@ def main():
                 plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
 
+
+        """
         ###################################################################
         # GROUPING ARG88/ARG83
         fig, ax = plt.subplots(2,1)
@@ -3457,6 +3509,7 @@ def main():
             plt.savefig(f'PHE170_ARG88_TRP86.png', dpi=300)
         plt.close()
 
+        """
 
         """
         #fig, ax = plt.subplots()
