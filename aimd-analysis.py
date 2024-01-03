@@ -3218,10 +3218,10 @@ def main():
             teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
             pyra.append(teta)
 
-        #T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
         # MD ANALYSIS
-        T=np.linspace(0,len(u.trajectory),len(u.trajectory))/100
+        #T=np.linspace(0,len(u.trajectory),len(u.trajectory))/100
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
         for i in range(len(connections)):
