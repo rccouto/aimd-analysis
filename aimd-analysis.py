@@ -3130,7 +3130,6 @@ def main():
             u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
         elif arg.dcdlist:
             dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
-            print(dcds)
             u=mda.Universe(arg.top, dcds)
         else:
             u=mda.Universe(arg.top, arg.dcd)
