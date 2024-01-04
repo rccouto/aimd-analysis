@@ -3139,10 +3139,17 @@ def main():
 
         connections=read_table("index_dist_final.dat")
 
-        pring=u.atoms[[940,941,945,949,947,943]]
-        trp136=u.atoms[[2129,2130,2132,2134,2136,2138]]
-        his190=u.atoms[[2985,2986,2988,2990,2992]]
-        trp86=u.atoms[[1359,1360,1362,1364,1366,1368]]
+        # TF-Dronpa2
+        pring=u.atoms[[948,949,953,957,955,951]]
+        trp136=u.atoms[[2137,2138,2140,2142,2144,2146]]
+        his190=u.atoms[[2993,2994,2996,2998,3000]]
+        trp86=u.atoms[[1367,1368,1370,1372,1374,1376]]
+        
+        # Dronpa2 and TF-Dronpa2 - MUTATION THR58->GLY58
+        #pring=u.atoms[[940,941,945,949,947,943]]
+        #trp136=u.atoms[[2129,2130,2132,2134,2136,2138]]
+        #his190=u.atoms[[2985,2986,2988,2990,2992]]
+        #trp86=u.atoms[[1359,1360,1362,1364,1366,1368]]
         
 
         # Chromophore indices
@@ -3249,10 +3256,10 @@ def main():
             ax2.tick_params(axis='y', labelcolor=color)
             ax2.legend(loc='upper right', framealpha=0.5)
 
-            #ax[1].set_xlabel('Time (fs)')
+            ax[1].set_xlabel('Time (fs)')
 
             # MD ANALYSIS
-            ax[1].set_xlabel('Time (ns)')
+            #ax[1].set_xlabel('Time (ns)')
 
             ax[1].legend(loc='upper left', framealpha=0.5)
             
@@ -3279,7 +3286,9 @@ def main():
             ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
 
             ax.set_ylabel(r'Distance ($\AA$)')
-            ax.set_xlabel('Time (ns)')
+
+            ax.set_xlabel('Time (fs)')
+            #ax.set_xlabel('Time (ns)')
 
             if arg.name:
                 ax.set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=15)
