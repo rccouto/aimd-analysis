@@ -3137,7 +3137,7 @@ def main():
         #u=mda.Universe('sphere.prmtop', dcd)
         #u=mda.Universe(prmtop, dcd)
 
-        connections=read_table("index_dist_final.dat")
+        connections=read_table("new_index_list.dat")
 
         # TF-Dronpa2
         pring=u.atoms[[948,949,953,957,955,951]]
@@ -3159,6 +3159,12 @@ def main():
         #chrome=[917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953]
 
         traj=u.atoms[[chrome]]
+        
+        # PHE170
+        phe170=u.select_atoms("resid 170")
+        phe170_pair=[3,1]
+        phe170_triple=[6,15,7]
+        phe170_dihedral=[]
 
         # Radian to degrees
         r2d=57.2958
@@ -3225,6 +3231,10 @@ def main():
             teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
             pyra.append(teta)
 
+            # PHE170 ring rotation
+            teta=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
+            phe170_dihedral.append(teta)
+
         T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
         # MD ANALYSIS
@@ -3272,6 +3282,42 @@ def main():
             else:
                 plt.savefig(f'{connections[i][0]}.png', dpi=300)
             plt.close()
+
+
+            if connections[i][0] == 'PHE170_HZ-GYC_Pring_COM':
+                fig, ax = plt.subplots(2,1)
+                fig.set_figheight(10)
+                fig.set_figwidth(15)
+
+                ax[0].plot(T, all_distances[i][:], label=connections[i][0])
+                ax[0].set_ylabel(r'Distance ($\AA$)')
+                if arg.name:
+                    ax[0].set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=20)
+                else:
+                    ax[0].set_title(f'Distance {connections[i][0]} + PHE170 ring dihedral', fontsize=20)
+                ax[0].set_xticklabels([])
+                ax[0].legend(loc='upper right', framealpha=0.5)
+
+                ax[1].plot(T,phe170_dihedral, label='PHE170 ring')
+                ax[1].set_ylabel(r'PHE170 $\phi$ (deg)')
+
+                ax[1].set_xlabel('Time (fs)')
+
+                # MD ANALYSIS
+                #ax[1].set_xlabel('Time (ns)')
+
+                ax[1].legend(loc='upper left', framealpha=0.5)
+                
+                ax[0].set_xlim(0,T[-1])
+                ax[1].set_xlim(0,T[-1])
+
+                plt.subplots_adjust(hspace=0)
+                if arg.name:
+                    plt.savefig(f'{arg.name}_{connections[i][0]}_RING.png', dpi=300)
+                else:
+                    plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
+                plt.close()
+
         
         # PLOT DISTANCE ONLY
         for i in range(len(connections)):
@@ -3303,6 +3349,8 @@ def main():
             else:
                 plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
+
+
 
 
         r"""
@@ -3547,11 +3595,104 @@ def main():
 
     if arg.test:
 
-        dcds = [file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+        import MDAnalysis as mda
+        from MDAnalysis.analysis import rdf, distances
+        from matplotlib.ticker import MultipleLocator
+        from matplotlib import pyplot as plt
+        import numpy as np
+        import seaborn as sns
+        import warnings, sys, socket
+        import cmcrameri.cm as cmc
+        from matplotlib.cm import ScalarMappable
 
-        #dcds = read_table(arg.dcdlist)
+        if socket.gethostname() == "nhlist-desktop":
+            sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
+        elif socket.gethostname() == "berzelius2.nsc.liu.se":
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
+        elif socket.gethostname() == "amaze":
+            sys.path.insert(1, '/data/users/rcc/codes/tcutil/code/geom_param')
+        else:
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        import geom_param as gp
+        
+        # suppress some MDAnalysis warnings about PSF files
+        warnings.filterwarnings('ignore')
 
-        print(dcds)
+        #################
+        #dcd='dronpa2_US_I0.dcd'
+        #prmtop='dronpa2_US_I0.prmtop'
+        #################
+        
+        # LOAD TRAJECTORY
+        if arg.dcd2:
+            u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
+        elif arg.dcdlist:
+            dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+            u=mda.Universe(arg.top, dcds)
+        else:
+            u=mda.Universe(arg.top, arg.dcd)
+
+        #u=mda.Universe('sphere.prmtop', dcd)
+        #u=mda.Universe(prmtop, dcd)
+
+        connections=['PHE170_HZ-GYC_Pring_COM', '2652', 'pring_com']
+
+        # TF-Dronpa2
+        pring=u.atoms[[948,949,953,957,955,951]]
+
+        # Chromophore indices
+        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
+
+        # Chromophore indices - Dronpa2 and TF-Dronpa2 - MUTATION THR58->GLY58
+        #chrome=[917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953]
+
+        traj=u.atoms[[chrome]]
+        phe170=u.select_atoms("resid 170")
+
+        # Radian to degrees
+        r2d=57.2958
+        p_torsion=[]
+        i_torsion=[]
+        pyra=[]
+        # Related atoms
+        i_pair=[22,24]
+        i_triple=[21,20,18]
+        p_pair=[22,21]
+        p_triple=[24,27,25]
+        DCOM=[]
+
+        #phe170_dihedral=[2641,2643,2646,2655]
+        #phe170_pair=[2643,2641]
+        #phe170_triple=[2646,2655,2647]
+
+        phe170_pair=[3,1]
+        phe170_triple=[6,15,7]
+
+
+        all_distances=np.zeros([len(connections), len(u.trajectory)])
+        
+        for i, _ in enumerate(u.trajectory):
+            
+            
+
+            phe170_dihedral=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
+            
+            print(phe170_dihedral)
+            # Compute the I- and P-torsion angles          
+            # I-torsion
+            teta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
+            i_torsion.append(teta)
+            # P-torsion
+            teta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
+            p_torsion.append(teta)
+            # Bridge piramidalization
+            teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
+            pyra.append(teta)
+
+        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        
+
+
 
 if __name__=="__main__":
     main()
