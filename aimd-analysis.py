@@ -3137,7 +3137,7 @@ def main():
         #u=mda.Universe('sphere.prmtop', dcd)
         #u=mda.Universe(prmtop, dcd)
 
-        connections=read_table("new_index_list.dat")
+        connections=read_table("index_dist_final.dat")
 
         # TF-Dronpa2
         pring=u.atoms[[948,949,953,957,955,951]]
