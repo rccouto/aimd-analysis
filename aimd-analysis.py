@@ -3246,6 +3246,9 @@ def main():
             fig.set_figheight(10)
             fig.set_figwidth(15)
 
+            avrg=np.mean(all_distances[i][:])
+            ax[0].plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+            
             ax[0].plot(T, all_distances[i][:], label=connections[i][0])
             ax[0].set_ylabel(r'Distance ($\AA$)')
             if arg.name:
