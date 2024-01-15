@@ -3163,6 +3163,7 @@ def main():
         trp136=u.atoms[[2137,2138,2140,2142,2144,2146]]
         his190=u.atoms[[2993,2994,2996,2998,3000]]
         trp86=u.atoms[[1367,1368,1370,1372,1374,1376]]
+        thr58_chg2=u.atoms[[882]]
         
         # Dronpa2 and TF-Dronpa2 - MUTATION THR58->GLY58
         #pring=u.atoms[[940,941,945,949,947,943]]
@@ -3259,9 +3260,8 @@ def main():
             phe170_dihedral.append(theta)
 
             # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
-            theta = three_points_angle(his190_com, pring_com, u.atoms[[882]])
+            theta = three_points_angle(his190_com, pring_com, thr58_chg2.positions[0])
             his_gyc_thr.append(theta)
-            print(his_gyc_thr)
         
 
         T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
@@ -3334,7 +3334,7 @@ def main():
                 ax[0].set_xticklabels([])
                 ax[0].legend(loc='upper right', framealpha=0.5)
 
-                ax[1].plot(T,phe170_dihedral, label='PHE170 ring')
+                ax[1].plot(T,phe170_dihedral, label='PHE170 ring dihedral')
                 ax[1].set_ylabel(r'PHE170 $\phi$ (deg)')
 
                 ax[1].set_xlabel('Time (fs)')
@@ -3387,6 +3387,29 @@ def main():
             plt.close()
 
 
+        # PLOT ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+
+        ax.plot(T, his_gyc_thr, label='HIS190_COM GYC_PRING_COM THR58_CG2')
+
+        avrg=np.mean(his_gyc_thr)
+
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+
+        ax.set_ylabel(r'Angle (deg)')
+
+        ax.set_xlabel('Time (fs)')
+        #ax.set_xlabel('Time (ns)')
+     
+        ax.set_title(f'ANGLE HIS190_COM GYC_PRING_COM THR58_CG2', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+
+        ax.set_xlim(0,T[-1])
+
+        plt.savefig(f'ANGLE_HIS190_COM-GYC_PRING_COM-THR58_CG2.png', dpi=300)
+        plt.close()
 
 
         r"""
