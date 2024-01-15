@@ -3261,6 +3261,7 @@ def main():
             # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
             theta = three_points_angle(his190_com, pring_com, u.atoms[[882]])
             his_gyc_thr.append(theta)
+            print(his_gyc_thr)
         
 
         T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
