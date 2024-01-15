@@ -270,6 +270,25 @@ def rename_residue(name: str) -> str:
 
     return new_name
 
+def three_points_angle(left: list, center: list, right: list) -> float:
+    """Compute the angle between three XYZ points. 
+
+    Args:
+        left (list): XYZ of point
+        center (list): XYZ of point
+        right (list): XYZ of point
+
+    Returns:
+        theta (float): angle in degrees
+    """
+    left_vec = normalize(left - center)
+    right_vec = normalize(right - center)
+
+    x = np.dot(left_vec, right_vec)
+    theta = 180.0 / math.pi * np.arccos(x)
+
+    return theta
+
 # MAIN PROGRAM
 def main():
     import sys
@@ -3166,6 +3185,9 @@ def main():
         phe170_triple=[6,15,7]
         phe170_dihedral=[]
 
+        # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
+        his_gyc_thr=[]
+
         # Radian to degrees
         r2d=57.2958
         p_torsion=[]
@@ -3214,26 +3236,32 @@ def main():
                     elif connect[2] == 'trp86_com':
                         atom2 = trp86_com
                     elif connect[2] == 'trp136_com':
-                        atom1 = trp86_com
+                        atom2 = trp136_com
                     else:
                         print(f"Center of mass {connect[2]} not available.")
                         sys.exit(1)
+ 
                 all_distances[j][i] = distances.distance_array(reference=atom1, configuration=atom2, box=u.dimensions)
             
             # Compute the I- and P-torsion angles          
             # I-torsion
-            teta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
-            i_torsion.append(teta)
+            theta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
+            i_torsion.append(theta)
             # P-torsion
-            teta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
-            p_torsion.append(teta)
+            theta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
+            p_torsion.append(theta)
             # Bridge piramidalization
-            teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
-            pyra.append(teta)
+            theta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
+            pyra.append(theta)
 
             # PHE170 ring rotation
-            teta=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
-            phe170_dihedral.append(teta)
+            theta=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
+            phe170_dihedral.append(theta)
+
+            # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
+            theta = three_points_angle(his190_com, pring_com, u.atoms[[882]])
+            his_gyc_thr.append(theta)
+        
 
         T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
