@@ -3453,7 +3453,11 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(1.5,4.0)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
+        
 
         plt.subplots_adjust(hspace=0)
         if arg.name:
@@ -3471,7 +3475,7 @@ def main():
 
         ax[0].plot(T, all_distances[9][:], label=connections[9][0])
         ax[0].plot(T, all_distances[13][:], label=connections[13][0])
-        ax[0].plot(T, all_distances[22][:], label=connections[22][0])
+        #ax[0].plot(T, all_distances[22][:], label=connections[22][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
         if arg.name:
@@ -3499,7 +3503,10 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(3,4.5)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
 
         plt.subplots_adjust(hspace=0)
         if arg.name:
@@ -3546,7 +3553,10 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(1.3,7.5)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
 
         plt.subplots_adjust(hspace=0)
         if arg.name:
@@ -3592,7 +3602,10 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(1.5,2.5)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
 
         plt.subplots_adjust(hspace=0)
 
@@ -3640,7 +3653,10 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(3,8)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
 
         plt.subplots_adjust(hspace=0)
 
@@ -3687,7 +3703,10 @@ def main():
         ax2.legend(loc='upper right', framealpha=0.5)
 
         ax[0].set_xlim(0,T[-1])
+        ax[0].set_ylim(3.5,6.0)
         ax[1].set_xlim(0,T[-1])
+        ax[1].set_ylim(-80,80)
+        ax2.set_ylim(-40,40)
 
         plt.subplots_adjust(hspace=0)
 
