@@ -3272,7 +3272,7 @@ def main():
             T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
         out = open("distances_summary.dat", 'w')
-        out.write("# Connection / minimum (A) / maximum (A) / mean (A)\n")
+        out.write("# Connection                  min (A) max (A)  mean (A)\n")
         
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
@@ -3325,7 +3325,7 @@ def main():
             # WRITE SUMMARY VALUES TO FILE
             min=np.min(all_distances[i][:])
             max=np.max(all_distances[i][:])
-            out.write('{:<12s}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
+            out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
 
 
             if connections[i][0] == 'PHE170_HZ-GYC_Pring_COM':
