@@ -3271,10 +3271,12 @@ def main():
         else:            
             T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
+        out = open("distances_summary.dat", 'w')
+        out.write("# Connection / minimum (A) / maximum (A) / mean (A)\n")
         
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
-        for i in range(len(connections)):
+        for i in range(len(connections)):   
             fig, ax = plt.subplots(2,1)
             fig.set_figheight(10)
             fig.set_figwidth(15)
@@ -3308,8 +3310,6 @@ def main():
             else:
                 ax[1].set_xlabel('Time (fs)')
 
-            
-
             ax[1].legend(loc='upper left', framealpha=0.5)
             
             ax[0].set_xlim(0,T[-1])
@@ -3321,6 +3321,11 @@ def main():
             else:
                 plt.savefig(f'{connections[i][0]}.png', dpi=300)
             plt.close()
+
+            # WRITE SUMMARY VALUES TO FILE
+            min=np.min(all_distances[i][:])
+            max=np.min(all_distances[i][:])
+            out.write('{:<8s}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
 
 
             if connections[i][0] == 'PHE170_HZ-GYC_Pring_COM':
@@ -3361,7 +3366,7 @@ def main():
                 else:
                     plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
                 plt.close()
-
+        out.close()
         
         # PLOT DISTANCE ONLY
         for i in range(len(connections)):
