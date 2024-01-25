@@ -330,6 +330,7 @@ def main():
     f.add_option('--file' , type=str,  default=None, help='Given file.')
     f.add_option('--projplane' , action="store_true",  default=False, help='Projection of atom positions on a plane')
     f.add_option('--distances' , action="store_true",  default = False, help='Plot distances.')
+    f.add_option('--mmd' , action="store_true",  default = False, help='Analysis of MM production dynamics.')
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -3264,10 +3265,13 @@ def main():
             his_gyc_thr.append(theta)
         
 
-        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
+        if arg.mmd:
+            # MD ANALYSIS
+            T=np.linspace(0,len(u.trajectory),len(u.trajectory))/100
+        else:            
+            T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
-        # MD ANALYSIS
-        #T=np.linspace(0,len(u.trajectory),len(u.trajectory))/100
+        
 
         # PLOT INDIVIDUAL CONTRIBUTIONS
         for i in range(len(connections)):
@@ -3289,7 +3293,7 @@ def main():
 
             ax[1].plot(T,i_torsion, label='I-torsion')
             ax[1].plot(T,p_torsion, label='P-torsion')
-            ax[1].set_ylabel(r'$\phi_P$ (deg)')
+            ax[1].set_ylabel(r'$\phi$ (deg)')
 
             color = 'tab:green'
             ax2 = ax[1].twinx()
@@ -3298,10 +3302,13 @@ def main():
             ax2.tick_params(axis='y', labelcolor=color)
             ax2.legend(loc='upper right', framealpha=0.5)
 
-            ax[1].set_xlabel('Time (fs)')
+            if arg.mmd:
+                # MD ANALYSIS
+                ax[1].set_xlabel('Time (ns)')
+            else:
+                ax[1].set_xlabel('Time (fs)')
 
-            # MD ANALYSIS
-            #ax[1].set_xlabel('Time (ns)')
+            
 
             ax[1].legend(loc='upper left', framealpha=0.5)
             
@@ -3337,10 +3344,11 @@ def main():
                 ax[1].plot(T,phe170_dihedral, label='PHE170 ring dihedral')
                 ax[1].set_ylabel(r'PHE170 $\phi$ (deg)')
 
-                ax[1].set_xlabel('Time (fs)')
-
+                if arg.mmd:
                 # MD ANALYSIS
-                #ax[1].set_xlabel('Time (ns)')
+                    ax[1].set_xlabel('Time (ns)')
+                else:
+                    ax[1].set_xlabel('Time (fs)')
 
                 ax[1].legend(loc='upper left', framealpha=0.5)
                 
@@ -3364,13 +3372,15 @@ def main():
             ax.plot(T, all_distances[i][:], label=connections[i][0])
 
             avrg=np.mean(all_distances[i][:])
-
             ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
 
             ax.set_ylabel(r'Distance ($\AA$)')
 
-            ax.set_xlabel('Time (fs)')
-            #ax.set_xlabel('Time (ns)')
+            if arg.mmd:
+                # MD ANALYSIS
+                    ax.set_xlabel('Time (ns)')
+            else:
+                    ax.set_xlabel('Time (fs)')
 
             if arg.name:
                 ax.set_title(f'{arg.name} - Distance {connections[i][0]}', fontsize=15)
@@ -3387,55 +3397,34 @@ def main():
             plt.close()
 
 
-        # PLOT ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
-        fig, ax = plt.subplots()
-        fig.set_figheight(5)
-        fig.set_figwidth(10)
-
-        ax.plot(T, his_gyc_thr, label='HIS190_COM GYC_PRING_COM THR58_CG2')
-
-        avrg=np.mean(his_gyc_thr)
-
-        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
-
-        ax.set_ylabel(r'Angle (deg)')
-
-        ax.set_xlabel('Time (fs)')
-        #ax.set_xlabel('Time (ns)')
-     
-        ax.set_title(f'ANGLE HIS190_COM GYC_PRING_COM THR58_CG2', fontsize=15)
-        ax.legend(loc='upper right', framealpha=0.5)
-
-        ax.set_xlim(0,T[-1])
-
-        plt.savefig(f'ANGLE_HIS190_COM-GYC_PRING_COM-THR58_CG2.png', dpi=300)
-        plt.close()
-
-
-        r"""
         ###################################################################
         # GROUPING ARG88/ARG83
         fig, ax = plt.subplots(2,1)
         fig.set_figheight(10)
         fig.set_figwidth(15)
 
+        ax[0].plot(T, all_distances[5][:], label=connections[5][0])
         ax[0].plot(T, all_distances[6][:], label=connections[6][0])
         ax[0].plot(T, all_distances[7][:], label=connections[7][0])
         ax[0].plot(T, all_distances[8][:], label=connections[8][0])
-        ax[0].plot(T, all_distances[9][:], label=connections[9][0])
-        #ax[0].plot(T, all_distances[11][:], label=connections[10][0])
+        ax[0].plot(T, all_distances[20][:], label=connections[20][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
         if arg.name:
             ax[0].set_title(f'{arg.name}: ARG88/ARG62 - GYC-OA', fontsize=20)
         else:
-            ax[0].set_title(f'ARG88/ARG62 - GYC-OA', fontsize=20)
+            ax[0].set_title(f'ARG88/ARG62 - GYC-OA/THR58', fontsize=20)
         ax[0].legend(loc='upper right', framealpha=0.5)
 
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
-        ax[1].set_ylabel(r'$\phi_P$ (deg)')
-        ax[1].set_xlabel('Time (fs)')
+        ax[1].set_ylabel(r'$\phi$ (deg)')
+
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
         ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
@@ -3450,9 +3439,9 @@ def main():
 
         plt.subplots_adjust(hspace=0)
         if arg.name:
-            plt.savefig(f'{arg.name}_ARG88_ARG62-GYC_OA.png', dpi=300)
+            plt.savefig(f'{arg.name}_ARG88_ARG62.png', dpi=300)
         else:
-            plt.savefig(f'ARG88_ARG62-GYC_OA.png', dpi=300)
+            plt.savefig(f'ARG88_ARG62_GYC.png', dpi=300)
         #plt.show()
         plt.close()
 
@@ -3462,9 +3451,9 @@ def main():
         fig.set_figheight(10)
         fig.set_figwidth(15)
 
+        ax[0].plot(T, all_distances[9][:], label=connections[9][0])
         ax[0].plot(T, all_distances[13][:], label=connections[13][0])
-        ax[0].plot(T, all_distances[14][:], label=connections[14][0])
-        ax[0].plot(T, all_distances[15][:], label=connections[15][0])
+        ax[0].plot(T, all_distances[22][:], label=connections[22][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
         if arg.name:
@@ -3476,8 +3465,12 @@ def main():
 
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
-        ax[1].set_ylabel(r'$\phi_P$ (deg)')
-        ax[1].set_xlabel('Time (fs)')
+        ax[1].set_ylabel(r'$\phi$ (deg)')
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
         ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
@@ -3504,22 +3497,27 @@ def main():
         fig.set_figwidth(15)
 
         ax[0].plot(T, all_distances[0][:], label=connections[0][0])
-        ax[0].plot(T, all_distances[1][:], label=connections[1][0])
-        ax[0].plot(T, all_distances[2][:], label=connections[2][0])
+        ax[0].plot(T, all_distances[24][:], label=connections[24][0])
+        if len(connections) > 25:
+            ax[0].plot(T, all_distances[25][:], label=connections[25][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
 
         if arg.name:
             ax[0].set_title(f'{arg.name}: P-RING_HB', fontsize=20)
         else:
-            ax[0].set_title(f'HIS190 - P-RING_HB', fontsize=20)
+            ax[0].set_title(f'SER139/WAT - P-RING_HB', fontsize=20)
 
         ax[0].legend(loc='upper right', framealpha=0.5)
 
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
-        ax[1].set_ylabel(r'$\phi_P$ (deg)')
-        ax[1].set_xlabel('Time (fs)')
+        ax[1].set_ylabel(r'$\phi$ (deg)')
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
         ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
@@ -3546,9 +3544,8 @@ def main():
         fig.set_figheight(10)
         fig.set_figwidth(15)
 
-        ax[0].plot(T, all_distances[3][:], label=connections[3][0])
-        #ax[0].plot(T, all_distances[17][:], label=connections[17][0])
-        ax[0].plot(T, all_distances[4][:], label=connections[4][0])
+        ax[0].plot(T, all_distances[18][:], label=connections[18][0])
+        ax[0].plot(T, all_distances[19][:], label=connections[19][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
 
@@ -3561,8 +3558,12 @@ def main():
 
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
-        ax[1].set_ylabel(r'$\phi_P$ (deg)')
-        ax[1].set_xlabel('Time (fs)')
+        ax[1].set_ylabel(r'$\phi$ (deg)')
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
         ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
@@ -3590,9 +3591,9 @@ def main():
         fig.set_figheight(10)
         fig.set_figwidth(15)
 
-        ax[0].plot(T, all_distances[11][:], label=connections[11][0])
-        ax[0].plot(T, all_distances[12][:], label=connections[12][0])
-        ax[0].plot(T, all_distances[18][:], label=connections[18][0])
+        ax[0].plot(T, all_distances[16][:], label=connections[16][0])
+        ax[0].plot(T, all_distances[17][:], label=connections[17][0])
+        ax[0].plot(T, all_distances[21][:], label=connections[21][0])
         ax[0].set_ylabel(r'Distance ($\AA$)')
         ax[0].set_xticklabels([])
 
@@ -3606,7 +3607,11 @@ def main():
         ax[1].plot(T,i_torsion, label='I-torsion')
         ax[1].plot(T,p_torsion, label='P-torsion')
         ax[1].set_ylabel(r'$\phi_P$ (deg)')
-        ax[1].set_xlabel('Time (fs)')
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
         ax[1].legend(loc='upper left', framealpha=0.5)
 
         color = 'tab:green'
@@ -3627,7 +3632,53 @@ def main():
             plt.savefig(f'PHE170_ARG88_TRP86.png', dpi=300)
         plt.close()
 
-        """
+        ###################################################################
+        # GROUPING ILE192
+        fig, ax = plt.subplots(2,1)
+        fig.set_figheight(10)
+        fig.set_figwidth(15)
+
+        ax[0].plot(T, all_distances[2][:], label=connections[2][0])
+        ax[0].plot(T, all_distances[3][:], label=connections[3][0])
+        ax[0].plot(T, all_distances[4][:], label=connections[4][0])
+        ax[0].set_ylabel(r'Distance ($\AA$)')
+        ax[0].set_xticklabels([])
+
+        if arg.name:
+            ax[0].set_title(f'{arg.name}: ILE192', fontsize=20)
+        else:
+            ax[0].set_title(f'ILE192', fontsize=20)
+
+        ax[0].legend(loc='upper right', framealpha=0.5)
+
+        ax[1].plot(T,i_torsion, label='I-torsion')
+        ax[1].plot(T,p_torsion, label='P-torsion')
+        ax[1].set_ylabel(r'$\phi$ (deg)')
+        if arg.mmd:
+            # MD ANALYSIS
+            ax[1].set_xlabel('Time (ns)')
+        else:
+            ax[1].set_xlabel('Time (fs)')
+        ax[1].legend(loc='upper left', framealpha=0.5)
+
+        color = 'tab:green'
+        ax2 = ax[1].twinx()
+        ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
+        ax2.set_ylabel(r'Pyramidalization (deg)')
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right', framealpha=0.5)
+
+        ax[0].set_xlim(0,T[-1])
+        ax[1].set_xlim(0,T[-1])
+
+        plt.subplots_adjust(hspace=0)
+
+        if arg.name:
+            plt.savefig(f'{arg.name}_ILE192_ALL.png', dpi=300)
+        else:
+            plt.savefig(f'ILE192_ALL.png', dpi=300)
+        plt.close()
+
 
         r"""
         #fig, ax = plt.subplots()
@@ -3650,7 +3701,6 @@ def main():
         cbar = fig.colorbar(sm, ax=ax1)
         plt.savefig('cm.png')
         """
-
 
     if arg.test:
 
@@ -3691,66 +3741,17 @@ def main():
         else:
             u=mda.Universe(arg.top, arg.dcd)
 
-        #u=mda.Universe('sphere.prmtop', dcd)
-        #u=mda.Universe(prmtop, dcd)
-
-        connections=['PHE170_HZ-GYC_Pring_COM', '2652', 'pring_com']
-
-        # TF-Dronpa2
-        pring=u.atoms[[948,949,953,957,955,951]]
-
-        # Chromophore indices
-        chrome=[924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953,954,955,956,957,958,959,960]
-
-        # Chromophore indices - Dronpa2 and TF-Dronpa2 - MUTATION THR58->GLY58
-        #chrome=[917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,949,950,951,952,953]
-
-        traj=u.atoms[[chrome]]
-        phe170=u.select_atoms("resid 170")
-
-        # Radian to degrees
-        r2d=57.2958
-        p_torsion=[]
-        i_torsion=[]
-        pyra=[]
-        # Related atoms
-        i_pair=[22,24]
-        i_triple=[21,20,18]
-        p_pair=[22,21]
-        p_triple=[24,27,25]
-        DCOM=[]
-
-        #phe170_dihedral=[2641,2643,2646,2655]
-        #phe170_pair=[2643,2641]
-        #phe170_triple=[2646,2655,2647]
-
-        phe170_pair=[3,1]
-        phe170_triple=[6,15,7]
-
-
-        all_distances=np.zeros([len(connections), len(u.trajectory)])
         
-        for i, _ in enumerate(u.trajectory):
-            
-            
+        ts=u.trajectory.ts
 
-            phe170_dihedral=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
-            
-            print(phe170_dihedral)
-            # Compute the I- and P-torsion angles          
-            # I-torsion
-            teta = gp.compute_torsion5(traj.positions[0],i_pair,i_triple)
-            i_torsion.append(teta)
-            # P-torsion
-            teta = gp.compute_torsion5(traj.positions[0],p_pair,p_triple)
-            p_torsion.append(teta)
-            # Bridge piramidalization
-            teta = gp.compute_pyramidalization(traj.positions[0],22,23,24,21)
-            pyra.append(teta)
+        protein = u.select_atoms("all")
+        with mda.Writer("test.dcd", protein.n_atoms) as W:
+            for i, _ in enumerate(u.trajectory):
+                if i == 0:
+                    W.write(protein)
 
-        T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
-        
-
+        #with mda.Writer("test.dcd") as W:
+        #    W.write(u.atoms)
 
 
 if __name__=="__main__":
