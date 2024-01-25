@@ -3301,6 +3301,7 @@ def main():
             ax2 = ax[1].twinx()
             ax2.plot(T, pyra, color=color, ls='--', lw=1, alpha=0.5, label='Pyr.')
             ax2.set_ylabel(r'Pyramidalization (deg)')
+            ax2.set_ylim(-40,40)
             ax2.tick_params(axis='y', labelcolor=color)
             ax2.legend(loc='upper right', framealpha=0.5)
 
@@ -3314,6 +3315,7 @@ def main():
             
             ax[0].set_xlim(0,T[-1])
             ax[1].set_xlim(0,T[-1])
+            ax[1].set_ylim(-80,80)
 
             plt.subplots_adjust(hspace=0)
             if arg.name:
@@ -3346,8 +3348,19 @@ def main():
                 ax[0].set_xticklabels([])
                 ax[0].legend(loc='upper right', framealpha=0.5)
 
+                min=np.min(all_distances[i][:])
+                max=np.max(all_distances[i][:])
+                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
+
+
                 ax[1].plot(T,phe170_dihedral, label='PHE170 ring dihedral')
                 ax[1].set_ylabel(r'PHE170 $\phi$ (deg)')
+
+                min=np.min(phe170_dihedral)
+                max=np.max(phe170_dihedral)
+                avrg=np.mean(phe170_dihedral)
+                phe170label='PHE170_ring_dihedral'
+                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(phe170label,  min, max, avrg))
 
                 if arg.mmd:
                 # MD ANALYSIS
