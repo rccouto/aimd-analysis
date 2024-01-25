@@ -3324,8 +3324,8 @@ def main():
 
             # WRITE SUMMARY VALUES TO FILE
             min=np.min(all_distances[i][:])
-            max=np.min(all_distances[i][:])
-            out.write('{:<8s}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
+            max=np.max(all_distances[i][:])
+            out.write('{:<12s}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg))
 
 
             if connections[i][0] == 'PHE170_HZ-GYC_Pring_COM':
