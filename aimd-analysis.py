@@ -3360,7 +3360,7 @@ def main():
                 max=np.max(phe170_dihedral)
                 avrg=np.mean(phe170_dihedral)
                 phe170label='PHE170_ring_dihedral'
-                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(phe170label,  min, max, avrg))
+                out.write('{:<12s}\t\t{:>7.2f}\t{:>7.2f}\t{:>7.2f}\n'.format(phe170label,  min, max, avrg))
 
                 if arg.mmd:
                 # MD ANALYSIS
