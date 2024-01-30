@@ -3408,7 +3408,6 @@ def main():
             else:
                 ax.set_title(f'Distance {connections[i][0]}', fontsize=15)
             ax.legend(loc='upper right', framealpha=0.5)
-
             ax.set_xlim(0,T[-1])
 
             if arg.name:
@@ -3416,6 +3415,7 @@ def main():
             else:
                 plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
+            np.save(f'{connections[i][0]}.npy', all_distances[i][:])
 
 
         ###################################################################
