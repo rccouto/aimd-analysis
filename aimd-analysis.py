@@ -3328,7 +3328,7 @@ def main():
             min=np.min(all_distances[i][:])
             max=np.max(all_distances[i][:])
             dev=np.std(all_distances[i][:])
-            out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
+            out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
 
 
             if connections[i][0] == 'PHE170_HZ-GYC_Pring_COM':
@@ -3352,7 +3352,7 @@ def main():
                 min=np.min(all_distances[i][:])
                 max=np.max(all_distances[i][:])
                 dev=np.std(all_distances[i][:])
-                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
+                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
 
 
                 ax[1].plot(T,phe170_dihedral, label='PHE170 ring dihedral')
@@ -3363,7 +3363,7 @@ def main():
                 avrg=np.mean(phe170_dihedral)
                 phe170label='PHE170_ring_dihedral'
                 dev=np.std(all_distances[i][:])
-                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
+                out.write('{:<12s}\t\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\t{:>2.2f}\n'.format(str(connections[i][0]),  min, max, avrg, dev))
 
                 if arg.mmd:
                 # MD ANALYSIS
