@@ -3743,55 +3743,32 @@ def main():
         """
 
     if arg.test:
-
-        import MDAnalysis as mda
-        from MDAnalysis.analysis import rdf, distances
         from matplotlib.ticker import MultipleLocator
         from matplotlib import pyplot as plt
         import numpy as np
         import seaborn as sns
-        import warnings, sys, socket
-        import cmcrameri.cm as cmc
-        from matplotlib.cm import ScalarMappable
+        import pandas as pd
+        import glob
 
-        if socket.gethostname() == "nhlist-desktop":
-            sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
-        elif socket.gethostname() == "berzelius2.nsc.liu.se":
-            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
-        elif socket.gethostname() == "amaze":
-            sys.path.insert(1, '/data/users/rcc/codes/tcutil/code/geom_param')
-        else:
-            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
-        import geom_param as gp
-        
-        # suppress some MDAnalysis warnings about PSF files
-        warnings.filterwarnings('ignore')
+        distances={}
+        for file in sorted(glob.iglob('*.npy')):
+            name = file.replace(".npy", "")
+            #new_entry = {name: np.load(file)}
+            distances[name]=np.load(file)
 
-        #################
-        #dcd='dronpa2_US_I0.dcd'
-        #prmtop='dronpa2_US_I0.prmtop'
-        #################
-        
-        # LOAD TRAJECTORY
-        if arg.dcd2:
-            u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
-        elif arg.dcdlist:
-            dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
-            u=mda.Universe(arg.top, dcds)
-        else:
-            u=mda.Universe(arg.top, arg.dcd)
+        #X=np.linspace(0, len(dists)-1, len(dists))
 
-        
-        ts=u.trajectory.ts
+        fig, ax = plt.subplots()
 
-        protein = u.select_atoms("all")
-        with mda.Writer("test.dcd", protein.n_atoms) as W:
-            for i, _ in enumerate(u.trajectory):
-                if i == 0:
-                    W.write(protein)
+        ax=sns.boxenplot(data=distances, width=.5, orient="h")
+        ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
 
-        #with mda.Writer("test.dcd") as W:
-        #    W.write(u.atoms)
+        #sns.stripplot(x=dists, color=".3", alpha=0.5)
+        #plt.xticks(rotation=30, ha='right', fontsize=8)
+
+        plt.tight_layout()
+        plt.show()
+
 
 
 if __name__=="__main__":
