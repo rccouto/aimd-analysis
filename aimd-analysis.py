@@ -3206,6 +3206,19 @@ def main():
         p_triple=[24,27,25]
         DCOM=[]
 
+        # FOR MINIMUM DISTANCE
+        gyc61=u.select_atoms("resid 61")
+        glu211=u.select_atoms("resid 211")
+        glu144=u.select_atoms("resid 144")
+
+        phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
+        glu211_out=open('GYC61_GLU211_min_dist.dat', 'w')
+        glu144_out=open('GYC61_GLU144_min_dist.dat', 'w')
+
+        phe170_dist=[]
+        glu211_dist=[]
+        glu144_dist=[]
+
         all_distances=np.zeros([len(connections), len(u.trajectory)])
         
         for i, _ in enumerate(u.trajectory):
@@ -3268,6 +3281,33 @@ def main():
             theta = three_points_angle(his190_com, pring_com, thr58_chg2.positions[0])
             his_gyc_thr.append(theta)
         
+            # MINIMUM DISTANCE BETWEEN GYC AND PHE/GLU
+            d=mda.analysis.distances.distance_array(gyc61,phe170)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            phe170_dist.append(min_dist)
+            phe170_out.write('GYC61-{:s} PHE170-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, phe170[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,glu211)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            glu211_dist.append(min_dist)
+            glu211_out.write('GYC61-{:s} GLU211-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu211[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,glu144)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            glu144_dist.append(min_dist)
+            glu144_out.write('GYC61-{:s} GLU144-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu144[index[0][1]].name, min_dist))
+
+
+        phe170_out.close()
+        glu211_out.close()
+        glu144_out.close()
+
+        np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
+        np.save('GYC61_GLU211_min_dist.npy', glu211_dist)
+        np.save('GYC61_GLU144_min_dist.npy', glu144_dist)
 
         if arg.mmd:
             # MD ANALYSIS
@@ -3420,6 +3460,64 @@ def main():
                 plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
             np.save(f'{connections[i][0]}.npy', all_distances[i][:])
+
+
+        # PLOT GYC61-PHE170 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, phe170_dist, label='GYC61-PHE170')
+        avrg=np.mean(phe170_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+                ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-PHE170', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        plt.savefig(f'GYC61_PHE170_min_dist.png', dpi=300)
+        plt.close()
+
+        # PLOT GYC61-GLU211 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, glu211_dist, label='GYC61-GLU211')
+        avrg=np.mean(glu211_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+                ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-GLU211', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        plt.savefig(f'GYC61_GLU211_min_dist.png', dpi=300)
+        plt.close()
+
+        # PLOT GYC61-GLU144 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, glu144_dist, label='GYC61-GLU144')
+        avrg=np.mean(glu144_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+                ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-GLU144', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        plt.savefig(f'GYC61_GLU144_min_dist.png', dpi=300)
+        plt.close()
 
 
         ###################################################################
