@@ -331,6 +331,9 @@ def main():
     f.add_option('--projplane' , action="store_true",  default=False, help='Projection of atom positions on a plane')
     f.add_option('--distances' , action="store_true",  default = False, help='Plot distances.')
     f.add_option('--mmd' , action="store_true",  default = False, help='Analysis of MM production dynamics.')
+    f.add_option('--distrib' , action="store_true",  default=False, help='Plot the distances distribution.')
+    f.add_option('--mindist' , action="store_true",  default = False, help='Plot minimum distance between two residues in a trajectory.')
+
 
     (arg, args) = f.parse_args(sys.argv[1:])
 
@@ -847,7 +850,6 @@ def main():
                 # LOOP OVER THE NEIGHBORS 
                 for i in range(len(sur_resids)):
                     
-
                     if sur_resids[i] not in try_set:
                         try_set.add(sur_resids[i])
 
@@ -2404,7 +2406,9 @@ def main():
         time=np.linspace(0,len(s1)-1,len(s1))/2
 
 
-        plt.plot(time,d1)
+        plt.bar(s1,d1)
+
+        #plt.plot(time,d1)
         plt.ylabel('Osc.strength (a.u.)')
         plt.xlabel('Time (fs)')
         plt.title('S0->S1 Oscillator strength')
@@ -2412,8 +2416,8 @@ def main():
         
         out=arg.dipole
         name=out.replace(".out", "-dipole.png")
-        plt.savefig(name, format='png', dpi=300)
-
+        #plt.savefig(name, format='png', dpi=300)
+        plt.show()
 
     if arg.spcplot == True:
         import hbond as hb
@@ -3742,7 +3746,7 @@ def main():
         plt.savefig('cm.png')
         """
 
-    if arg.test:
+    if arg.distrib:
         from matplotlib.ticker import MultipleLocator
         from matplotlib import pyplot as plt
         import numpy as np
@@ -3750,26 +3754,184 @@ def main():
         import pandas as pd
         import glob
 
-        distances={}
-        for file in sorted(glob.iglob('*.npy')):
-            name = file.replace(".npy", "")
-            #new_entry = {name: np.load(file)}
-            distances[name]=np.load(file)
 
-        #X=np.linspace(0, len(dists)-1, len(dists))
-
-        fig, ax = plt.subplots()
-
-        ax=sns.boxenplot(data=distances, width=.5, orient="h")
-        ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
-
-        #sns.stripplot(x=dists, color=".3", alpha=0.5)
-        #plt.xticks(rotation=30, ha='right', fontsize=8)
-
-        plt.tight_layout()
-        plt.show()
+        data=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
+              ['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
+              ['GLU','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy'],
+              ['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
+              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','PHE170_HZ-GYC_Pring_COM.npy','THR58_CG2-GYC_Pring_COM.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','HIS190_COM-GYC_Pring_COM.npy']]
 
 
+        for group in data:
+            distances={}
+            vectors={}
+            for i, dist in enumerate(group):
+                if i == 0:
+                    figname = dist
+                else:
+                    if figname == 'PROJ':
+                        if 'vector' in dist:
+                            name = dist.replace(".npy", "")
+                            vectors[name]=np.load(dist)
+                        else:
+                            name = dist.replace(".npy", "")
+                            distances[name]=np.load(dist)
+                    else:
+                        name = dist.replace(".npy", "")
+                        distances[name]=np.load(dist)
+
+            if figname == 'PROJ':
+                # BOXEN PLOT
+                fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
+                sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear", ax=ax1)
+                ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax1.set_xlim(0,3)
+                sns.boxenplot(data=vectors, width=.5, orient="h", width_method="linear", ax=ax2)
+                ax2.set_xlabel(r'Angle (deg)', fontsize=12)
+                ax2.set_xlim(-5,35)
+                plt.tight_layout()
+                plt.savefig(f'{figname}_dist_distrib_boxen.png', dpi=300)
+                plt.close()
+                
+                # BOXEN PLOT
+                fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
+                sns.boxenplot(data=distances, width=.5, orient="h", width_method="exponential", ax=ax1)
+                ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax1.set_xlim(0,3)
+                sns.boxenplot(data=vectors, width=.5, orient="h", width_method="exponential", ax=ax2)
+                ax2.set_xlabel(r'Angle (deg)', fontsize=12)
+                ax2.set_xlim(-5,35)
+                plt.tight_layout()
+                plt.savefig(f'{figname}_dist_distrib_boxen2.png', dpi=300)
+                plt.close()
+
+
+                # VIOLIN PLOT
+                fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
+                sns.violinplot(data=distances, orient="h", inner="box", ax=ax1)
+                ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax1.set_xlim(0,3)
+                sns.violinplot(data=vectors, orient="h", inner="box", ax=ax2)
+                ax2.set_xlim(-5,35)
+                ax2.set_xlabel(r'Angle (deg)', fontsize=12)
+                plt.tight_layout()
+                #plt.show()
+                plt.savefig(f'{figname}_dist_distrib_violin.png', dpi=300)
+                plt.close()
+
+            else:
+                    # BOXEN PLOT
+                fig, ax = plt.subplots(figsize=(10,5))
+                sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear")
+                ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax.xaxis.set_tick_params(labelsize=10)
+                if figname == 'ALL':
+                    ax.set_xlim(1.1,7.5)
+                else:
+                    ax.set_xlim(1.1,5)
+                plt.tight_layout()
+                plt.savefig(f'{figname}_dist_distrib_boxen.png', dpi=300)
+                plt.close()
+                
+                # BOXEN PLOT
+                fig, ax = plt.subplots(figsize=(10,5))
+                sns.boxenplot(data=distances, width=.5, orient="h", width_method="exponential")
+                ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax.xaxis.set_tick_params(labelsize=10)
+                if figname == 'ALL':
+                    ax.set_xlim(1.1,7.5)
+                else:
+                    ax.set_xlim(1.1,5)
+                plt.tight_layout()
+                plt.savefig(f'{figname}_dist_distrib_boxen2.png', dpi=300)
+                plt.close()
+
+
+                # VIOLIN PLOT
+                fig, ax = plt.subplots(figsize=(10,5))
+                sns.violinplot(data=distances, orient="h", inner="box")
+                ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
+                ax.xaxis.set_tick_params(labelsize=10)
+                if figname == 'ALL':
+                    ax.set_xlim(1.1,7.5)
+                else:
+                    ax.set_xlim(1.1,5)
+                plt.tight_layout()
+                #plt.show()
+                plt.savefig(f'{figname}_dist_distrib_violin.png', dpi=300)
+                plt.close()
+
+    if arg.mindist:
+        import MDAnalysis as mda
+        from MDAnalysis.analysis import rdf, distances
+        from matplotlib.ticker import MultipleLocator
+        from matplotlib import pyplot as plt
+        import numpy as np
+        import seaborn as sns
+        import warnings, sys, socket
+        import cmcrameri.cm as cmc
+        from matplotlib.cm import ScalarMappable
+
+        if socket.gethostname() == "nhlist-desktop":
+            sys.path.insert(1, '/home/rcouto/theochem/progs/tcutil/code/geom_param')
+        elif socket.gethostname() == "berzelius2.nsc.liu.se":
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
+        elif socket.gethostname() == "amaze":
+            sys.path.insert(1, '/data/users/rcc/codes/tcutil/code/geom_param')
+        else:
+            sys.path.insert(1, '/Users/rafael/theochem/projects/codes/tcutil/code/geom_param') 
+        import geom_param as gp
+        
+        # suppress some MDAnalysis warnings about PSF files
+        warnings.filterwarnings('ignore')
+
+        # LOAD TRAJECTORY
+        if arg.dcd2:
+            u=mda.Universe(arg.top, [arg.dcd,arg.dcd2])
+        elif arg.dcdlist:
+            dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+            u=mda.Universe(arg.top, dcds)
+        else:
+            u=mda.Universe(arg.top, arg.dcd)
+
+        gyc61=u.select_atoms("resid 61")
+        phe170=u.select_atoms("resid 170")
+        glu211=u.select_atoms("resid 211")
+        glu144=u.select_atoms("resid 144")
+
+        phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
+        glu211_out=open('GYC61_GLU211_min_dist.dat', 'w')
+        glu144_out=open('GYC61_GLU144_min_dist.dat', 'w')
+
+        phe170_dist=[]
+        glu211_dist=[]
+        glu144_dist=[]
+        for _ in u.trajectory:
+            d=mda.analysis.distances.distance_array(gyc61,phe170)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            phe170_dist.append(min_dist)
+            phe170_out.write('GYC61-{:s} PHE170-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, phe170[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,glu211)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            glu211_dist.append(min_dist)
+            glu211_out.write('GYC61-{:s} GLU211-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu211[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,glu144)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            glu144_dist.append(min_dist)
+            glu144_out.write('GYC61-{:s} GLU144-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu144[index[0][1]].name, min_dist))
+
+        phe170_out.close()
+        glu211_out.close()
+        glu144_out.close()
+
+        np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
+        np.save('GYC61_GLU211_min_dist.npy', glu211_dist)
+        np.save('GYC61_GLU144_min_dist.npy', glu144_dist)
 
 if __name__=="__main__":
     main()
