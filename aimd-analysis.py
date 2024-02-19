@@ -3854,11 +3854,16 @@ def main():
 
 
         data=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
-              ['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
-              ['GLU','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy'],
-              ['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
-              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','PHE170_HZ-GYC_Pring_COM.npy','THR58_CG2-GYC_Pring_COM.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','HIS190_COM-GYC_Pring_COM.npy']]
+              #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
+              ['HIS','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy'],
+              #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
+              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
 
+        labels=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
+              #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
+              ['HIS','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy'],
+              #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
+              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
 
         for group in data:
             distances={}
@@ -3880,6 +3885,7 @@ def main():
 
             if figname == 'PROJ':
                 # BOXEN PLOT
+                """
                 fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear", ax=ax1)
                 ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3890,7 +3896,7 @@ def main():
                 plt.tight_layout()
                 plt.savefig(f'{figname}_dist_distrib_boxen.png', dpi=300)
                 plt.close()
-                
+                """
                 # BOXEN PLOT
                 fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="exponential", ax=ax1)
@@ -3905,6 +3911,7 @@ def main():
 
 
                 # VIOLIN PLOT
+                """
                 fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
                 sns.violinplot(data=distances, orient="h", inner="box", ax=ax1)
                 ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3916,9 +3923,10 @@ def main():
                 #plt.show()
                 plt.savefig(f'{figname}_dist_distrib_violin.png', dpi=300)
                 plt.close()
-
+                """
             else:
                     # BOXEN PLOT
+                """
                 fig, ax = plt.subplots(figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear")
                 ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3930,22 +3938,26 @@ def main():
                 plt.tight_layout()
                 plt.savefig(f'{figname}_dist_distrib_boxen.png', dpi=300)
                 plt.close()
-                
+                """
                 # BOXEN PLOT
                 fig, ax = plt.subplots(figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="exponential")
                 ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
                 ax.xaxis.set_tick_params(labelsize=10)
-                if figname == 'ALL':
-                    ax.set_xlim(1.1,7.5)
+                if figname == 'ALL' or figname == 'HIS':
+                    ax.set_xlim(1.1,13)
                 else:
                     ax.set_xlim(1.1,5)
                 plt.tight_layout()
+                #plt.show()
                 plt.savefig(f'{figname}_dist_distrib_boxen2.png', dpi=300)
+                plt.savefig(f'{figname}_dist_distrib_boxen2.svg', format="svg")
+
                 plt.close()
 
 
                 # VIOLIN PLOT
+                """
                 fig, ax = plt.subplots(figsize=(10,5))
                 sns.violinplot(data=distances, orient="h", inner="box")
                 ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3958,7 +3970,7 @@ def main():
                 #plt.show()
                 plt.savefig(f'{figname}_dist_distrib_violin.png', dpi=300)
                 plt.close()
-
+                """
     if arg.mindist:
         import MDAnalysis as mda
         from MDAnalysis.analysis import rdf, distances
@@ -3994,16 +4006,19 @@ def main():
 
         gyc61=u.select_atoms("resid 61")
         phe170=u.select_atoms("resid 170")
-        glu211=u.select_atoms("resid 211")
-        glu144=u.select_atoms("resid 144")
+        glu208=u.select_atoms("resid 208")
+        glu141=u.select_atoms("resid 141")
+        ile192=u.select_atoms("resid 192")
 
         phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
-        glu211_out=open('GYC61_GLU211_min_dist.dat', 'w')
-        glu144_out=open('GYC61_GLU144_min_dist.dat', 'w')
+        glu208_out=open('GYC61_GLU208_min_dist.dat', 'w')
+        glu141_out=open('GYC61_GLU141_min_dist.dat', 'w')
+        ile192_out=open('GYC61_ILE192_min_dist.dat', 'w')
 
         phe170_dist=[]
-        glu211_dist=[]
-        glu144_dist=[]
+        glu208_dist=[]
+        glu141_dist=[]
+        ile192_dist=[]
         for _ in u.trajectory:
             d=mda.analysis.distances.distance_array(gyc61,phe170)
             min_dist=np.min(d)
@@ -4011,26 +4026,33 @@ def main():
             phe170_dist.append(min_dist)
             phe170_out.write('GYC61-{:s} PHE170-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, phe170[index[0][1]].name, min_dist))
 
-            d=mda.analysis.distances.distance_array(gyc61,glu211)
+            d=mda.analysis.distances.distance_array(gyc61,glu208)
             min_dist=np.min(d)
             index=np.argwhere(d == min_dist)
-            glu211_dist.append(min_dist)
-            glu211_out.write('GYC61-{:s} GLU211-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu211[index[0][1]].name, min_dist))
+            glu208_dist.append(min_dist)
+            glu208_out.write('GYC61-{:s} GLU208-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu208[index[0][1]].name, min_dist))
 
-            d=mda.analysis.distances.distance_array(gyc61,glu144)
+            d=mda.analysis.distances.distance_array(gyc61,glu141)
             min_dist=np.min(d)
             index=np.argwhere(d == min_dist)
-            glu144_dist.append(min_dist)
-            glu144_out.write('GYC61-{:s} GLU144-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu144[index[0][1]].name, min_dist))
+            glu141_dist.append(min_dist)
+            glu141_out.write('GYC61-{:s} GLU141-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu141[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,ile192)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            ile192_dist.append(min_dist)
+            ile192_out.write('GYC61-{:s} ILE192-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, ile192[index[0][1]].name, min_dist))
 
         phe170_out.close()
-        glu211_out.close()
-        glu144_out.close()
+        glu208_out.close()
+        glu141_out.close()
+        ile192_out.close()
 
         np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
-        np.save('GYC61_GLU211_min_dist.npy', glu211_dist)
-        np.save('GYC61_GLU144_min_dist.npy', glu144_dist)
-
+        np.save('GYC61_GLU208_min_dist.npy', glu208_dist)
+        np.save('GYC61_GLU141_min_dist.npy', glu141_dist)
+        np.save('GYC61_ILE192_min_dist.npy', ile192_dist)
 
         if arg.mmd:
             # MD ANALYSIS
@@ -4056,12 +4078,12 @@ def main():
         plt.savefig(f'GYC61_PHE170_min_dist.png', dpi=300)
         plt.close()
 
-        # PLOT GYC61-GLU211 DISTANCE
+        # PLOT GYC61-GLU208 DISTANCE
         fig, ax = plt.subplots()
         fig.set_figheight(5)
         fig.set_figwidth(10)
-        ax.plot(T, glu211_dist, label='GYC61-GLU211')
-        avrg=np.mean(glu211_dist)
+        ax.plot(T, glu208_dist, label='GYC61-GLU208')
+        avrg=np.mean(glu208_dist)
         ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
         ax.set_ylabel(r'Distance ($\AA$)')
         if arg.mmd:
@@ -4069,18 +4091,18 @@ def main():
                 ax.set_xlabel('Time (ns)')
         else:
                 ax.set_xlabel('Time (fs)')
-        ax.set_title(f'Distance GYC61-GLU211', fontsize=15)
+        ax.set_title(f'Distance GYC61-GLU208', fontsize=15)
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
-        plt.savefig(f'GYC61_GLU211_min_dist.png', dpi=300)
+        plt.savefig(f'GYC61_GLU208_min_dist.png', dpi=300)
         plt.close()
 
-        # PLOT GYC61-GLU144 DISTANCE
+        # PLOT GYC61-GLU141 DISTANCE
         fig, ax = plt.subplots()
         fig.set_figheight(5)
         fig.set_figwidth(10)
-        ax.plot(T, glu144_dist, label='GYC61-GLU144')
-        avrg=np.mean(glu144_dist)
+        ax.plot(T, glu141_dist, label='GYC61-GLU141')
+        avrg=np.mean(glu141_dist)
         ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
         ax.set_ylabel(r'Distance ($\AA$)')
         if arg.mmd:
@@ -4088,12 +4110,31 @@ def main():
                 ax.set_xlabel('Time (ns)')
         else:
                 ax.set_xlabel('Time (fs)')
-        ax.set_title(f'Distance GYC61-GLU144', fontsize=15)
+        ax.set_title(f'Distance GYC61-GLU141', fontsize=15)
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
-        plt.savefig(f'GYC61_GLU144_min_dist.png', dpi=300)
+        plt.savefig(f'GYC61_GLU141_min_dist.png', dpi=300)
         plt.close()
 
+        # PLOT GYC61-ILE192 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, ile192_dist, label='GYC61-ILE192')
+        avrg=np.mean(ile192_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+            ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-ILE192', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        plt.savefig(f'GYC61_ILE192_min_dist.png', dpi=300)
+        plt.close()
+        
 if __name__=="__main__":
     main()
 
