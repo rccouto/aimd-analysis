@@ -3857,13 +3857,32 @@ def main():
               #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
               ['HIS','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy'],
               #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
-              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
+              ['ALL',
+               'SER139-HG_GYC61-OK.npy',
+               'ARG63_HH12-GYC_OA.npy',
+               'ARG63_HH22-GYC_OA.npy',
+               'ARG88_HH12-GYC_OA.npy',
+               'ARG88_HH12-THR58_O.npy',
+               'ARG88_HH22-GYC_OA.npy', 
+               'ILE192_CD1-GYC_CG.npy',
+               'ILE192_CG2-GYC_CI.npy',
+               'ILE192_CB-GYC_CI.npy',
+               'THR58_CG2-GYC_Pring_COM.npy',
+               'HIS190_COM-GYC_Pring_COM.npy', 
+               'HIS190_COM-THR58_CG2.npy',
+               'GYC61_ILE192_min_dist.npy',
+               'GYC61_PHE170_min_dist.npy',
+               'GYC61_GLU211_min_dist.npy', 
+               'GYC61_GLU144_min_dist.npy']]
 
-        labels=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
+        labels=[['ARG',r'R66-H$_1$/GYC-O$_I$',r'R66-H$_2$/GYC-O$_I',r'R91_H$_1$/GYC-O$_I',r'R91_H$_1$-THR58_O',r'R91-H$_2$/GYC-O$_I'],
               #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
-              ['HIS','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy'],
+                ['HIS',r'E144-O/H193-H$_2$',r'E211-O/H193-H$_1$', r'E211/GYC61 m.d.', r'E144/GYC61 m.d.', r'H193-Ring/GYC-P$_{ring}$', r'H193-Ring/T59_C$_T$'],
               #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
-              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
+              ['ALL', r'R66-H$_1$/GYC-O$_I$',r'R66-H$_2$/GYC-O$_I',r'R91_H$_1$/GYC-O$_I',r'R91_H$_1$-THR58_O',r'R91-H$_2$/GYC-O$_I',
+                r'S142-H/GYC61-O$_P$.npy', 
+                # STOP HERE
+                'GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
 
         for group in data:
             distances={}
@@ -4009,16 +4028,19 @@ def main():
         glu208=u.select_atoms("resid 208")
         glu141=u.select_atoms("resid 141")
         ile192=u.select_atoms("resid 192")
+        val154=u.select_atoms("resid 154")
 
         phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
         glu208_out=open('GYC61_GLU208_min_dist.dat', 'w')
         glu141_out=open('GYC61_GLU141_min_dist.dat', 'w')
         ile192_out=open('GYC61_ILE192_min_dist.dat', 'w')
+        val154_out=open('GYC61_VAL154_min_dist.dat', 'w')
 
         phe170_dist=[]
         glu208_dist=[]
         glu141_dist=[]
         ile192_dist=[]
+        val154_dist=[]
         for _ in u.trajectory:
             d=mda.analysis.distances.distance_array(gyc61,phe170)
             min_dist=np.min(d)
@@ -4044,15 +4066,24 @@ def main():
             ile192_dist.append(min_dist)
             ile192_out.write('GYC61-{:s} ILE192-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, ile192[index[0][1]].name, min_dist))
 
+            d=mda.analysis.distances.distance_array(gyc61,val154)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            val154_dist.append(min_dist)
+            val154_out.write('GYC61-{:s} VAL154-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, val154[index[0][1]].name, min_dist))
+
+
         phe170_out.close()
         glu208_out.close()
         glu141_out.close()
         ile192_out.close()
+        val154_out.close()
 
         np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
         np.save('GYC61_GLU208_min_dist.npy', glu208_dist)
         np.save('GYC61_GLU141_min_dist.npy', glu141_dist)
         np.save('GYC61_ILE192_min_dist.npy', ile192_dist)
+        np.save('GYC61_VAL154_min_dist.npy', val154_dist)
 
         if arg.mmd:
             # MD ANALYSIS
@@ -4133,6 +4164,25 @@ def main():
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
         plt.savefig(f'GYC61_ILE192_min_dist.png', dpi=300)
+        plt.close()
+
+        # PLOT GYC61-VAL154 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, val154_dist, label='GYC61-VAL154')
+        avrg=np.mean(val154_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+            ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-VAL154', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        plt.savefig(f'GYC61_VAL154_min_dist.png', dpi=300)
         plt.close()
 
 if __name__=="__main__":
