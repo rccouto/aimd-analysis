@@ -3885,7 +3885,7 @@ def main():
 
             if figname == 'PROJ':
                 # BOXEN PLOT
-                """
+                r"""
                 fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear", ax=ax1)
                 ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3911,7 +3911,7 @@ def main():
 
 
                 # VIOLIN PLOT
-                """
+                r"""
                 fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,5))
                 sns.violinplot(data=distances, orient="h", inner="box", ax=ax1)
                 ax1.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3926,7 +3926,7 @@ def main():
                 """
             else:
                     # BOXEN PLOT
-                """
+                r"""
                 fig, ax = plt.subplots(figsize=(10,5))
                 sns.boxenplot(data=distances, width=.5, orient="h", width_method="linear")
                 ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -3957,7 +3957,7 @@ def main():
 
 
                 # VIOLIN PLOT
-                """
+                r"""
                 fig, ax = plt.subplots(figsize=(10,5))
                 sns.violinplot(data=distances, orient="h", inner="box")
                 ax.set_xlabel(r'Distance ($\AA$)', fontsize=12)
@@ -4134,7 +4134,7 @@ def main():
         ax.set_xlim(0,T[-1])
         plt.savefig(f'GYC61_ILE192_min_dist.png', dpi=300)
         plt.close()
-        
+
 if __name__=="__main__":
     main()
 
