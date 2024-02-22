@@ -432,7 +432,7 @@ def main():
 
         # ON BERZELIUS
         elif socket.gethostname() == "berzelius2.nsc.liu.se":
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             # LOAD TRAJECTORIE(S)
             topology = md.load_prmtop(arg.top)
@@ -449,7 +449,7 @@ def main():
 
         # ON BERZELIUS
         else:
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
+            sys.path.insert(1, '/proj/berzelius-2023-33/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
             topology = md.load_prmtop('sphere.prmtop')
             traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
