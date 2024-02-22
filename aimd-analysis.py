@@ -3451,10 +3451,7 @@ def main():
                 if arg.name:
                     plt.savefig(f'{arg.name}_{connections[i][0]}_RING.png', dpi=300)
                 else:
-                    if arg.name:
-                        plt.savefig(f'{arg.name}_{connections[i][0]}_RING.png', dpi=300)
-                    else:
-                        plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
+                    plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
                 plt.close()
         out.close()
         
@@ -3489,8 +3486,11 @@ def main():
             else:
                 plt.savefig(f'{connections[i][0]}_ONLY.png', dpi=300)
             plt.close()
-            np.save(f'{connections[i][0]}.npy', all_distances[i][:])
+            if arg.name:
 
+                np.save(f'{arg.name}_{connections[i][0]}.npy', all_distances[i][:])
+            else:
+                np.save(f'{connections[i][0]}.npy', all_distances[i][:])
 
         # PLOT GYC61-PHE170 DISTANCE
         fig, ax = plt.subplots()
