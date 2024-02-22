@@ -334,7 +334,6 @@ def main():
     f.add_option('--distrib' , action="store_true",  default=False, help='Plot the distances distribution.')
     f.add_option('--mindist' , action="store_true",  default = False, help='Plot minimum distance between two residues in a trajectory.')
 
-
     (arg, args) = f.parse_args(sys.argv[1:])
 
     if len(sys.argv) == 1:
@@ -431,21 +430,22 @@ def main():
             else:
                 traj = md.load_dcd(arg.dcd, top = topology)
 
-        elif socket.gethostname() == "berzelius002" and arg.analyze == 'torsonly':
+        # ON BERZELIUS
+        elif socket.gethostname() == "berzelius2.nsc.liu.se":
             sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
             import geom_param as gp
-            topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('coors-all.dcd', top = topology)
-
-        elif socket.gethostname() == "berzelius002" and arg.analyze == 'all':
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
-            import geom_param as gp
-            topology = md.load_prmtop('sphere.prmtop')
-            traj = md.load_dcd('prod.dcd', top = topology)
-            #traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
-            #traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
-            #traj=md.join([traj1,traj2], discard_overlapping_frames=True)
-            #del traj1,traj2
+            # LOAD TRAJECTORIE(S)
+            topology = md.load_prmtop(arg.top)
+            if arg.dcd2 and arg.dcd :
+                traj1 = md.load_dcd(arg.dcd, top = topology)
+                traj2 = md.load_dcd(arg.dcd2, top = topology)
+                traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+                del traj1, traj2
+            elif arg.dcdlist:
+                dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+                traj=md.join(dcds, discard_overlapping_frames=True)
+            else:
+                traj = md.load_dcd(arg.dcd, top = topology)
 
         # ON BERZELIUS
         else:
@@ -456,25 +456,6 @@ def main():
             traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
             traj=md.join([traj1,traj2], discard_overlapping_frames=True)
             del traj1,traj2
-
-        """
-        elif  socket.gethostname() == "berzelius002":
-            sys.path.insert(1, '/proj/nhlist/users/x_rafca/progs/tcutil/code/geom_param')
-            import geom_param as gp
-
-            topology = md.load_prmtop('sphere.prmtop')
-            traj1 = md.load_dcd('scr.coors/coors.dcd', top = topology)
-            traj2 = md.load_dcd('res01/scr.coors/coors.dcd', top = topology)
-            traj3 = md.load_dcd('res02/scr.coors/coors.dcd', top = topology)
-            traj4 = md.load_dcd('res03/scr.coors/coors.dcd', top = topology)
-            traj5 = md.load_dcd('res04/scr.coors/coors.dcd', top = topology)
-            traj6 = md.load_dcd('res05/scr.coors/coors.dcd', top = topology)
-            traj7 = md.load_dcd('res06/scr.coors/coors.dcd', top = topology)
-            traj8 = md.load_dcd('res07/scr.coors/coors.dcd', top = topology)
-
-            traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8], discard_overlapping_frames=True)
-            del traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8
-        """
 
 
         # Chromophore indices
@@ -493,34 +474,24 @@ def main():
                 teta = gp.compute_pyramidalization(traj.xyz[i,chrome,:],22,23,24,21)
                 teta_pyra.append(teta)
 
+            if arg.name:
+                np.save(f"{arg.name}_bridge_pyr.npy",np.array(teta_pyra))
+            else:
+                np.save("bridge_pyr.npy",np.array(teta_pyra))
+
             t=np.linspace(0, len(teta_pyra)-1, len(teta_pyra))*0.5
             plt.plot(t, teta_pyra)
-            plt.ylabel('HOOP (deg)')
+            plt.ylabel(r"$\phi_{pyr}$ (degrees)")
             plt.xlabel('Time (fs)')
             plt.ylim(-90,30)
-            plt.title('HOOP')
-            plt.savefig('hoop.png')
+            plt.title('Pyramidalization angle')
+
+            if arg.name:
+                plt.savefig(f"{arg.name}_bridge_pyr.png", dpi=300)
+            else:
+                plt.savefig('bridge_pyr.png', dpi=300)
             plt.close()
             #plt.show(block = True)
-            
-
-        if arg.analyze == "rotation":
-            """
-            Compute and plot the rotation of angle of a group 
-            """
-            teta_rotation=[]
-            for i in range(len(traj)):
-                # S-H rotation angle
-                teta = compute_rotation(traj.xyz[i,chrome,:],10,9,6,4)
-                teta_rotation.append(teta)
-
-            plt.plot(teta_rotation)
-            plt.ylabel('Torsion (deg)')
-            plt.xlabel('Timeframe')
-            plt.title('S-H rotation')
-            plt.savefig('sh-rotation.png')
-            #plt.show(block = True)
-            plt.close()
 
         if arg.analyze == "torsion":
             """"
@@ -584,7 +555,6 @@ def main():
                     PIminTraj=traj[count]
                     PIminTraj.save_amberrst7('PImax.rst7')
             
-
             # Time 
             t=np.linspace(0, len(i_torsion)-1, len(i_torsion))*0.5
 
@@ -683,22 +653,28 @@ def main():
 
 
 
-        if arg.analyze == "flap" or arg.analyze == "all":
+        if arg.analyze == "flap":
             """"
             Compute the flapping angle.
             """
             h1 = np.array([[944, 945, 948, 951]], dtype=np.int32)
-
             flap_dihedral_angle = md.compute_dihedrals(traj, h1)
 
-            t=np.linspace(0, len(flap_dihedral_angle)-1, len(flap_dihedral_angle))*0.5
+            if arg.name:
+                np.save(f"{arg.name}_flap.npy",np.array(flap_dihedral_angle))
+            else:
+                np.save("flap.npy",np.array(flap_dihedral_angle))
 
+            t=np.linspace(0, len(flap_dihedral_angle)-1, len(flap_dihedral_angle))*0.5
             plt.plot(t,flap_dihedral_angle*r2d)
             plt.ylabel('Flapping Dihedral angle (deg)')
             plt.xlabel('Time (fs)')
             plt.ylim(-25,5)
             plt.title('Flapping Dihedral angle')
-            plt.savefig('flap_dihedral.png')
+            if arg.name:
+                plt.savefig(f"{arg.name}_flap.png")
+            else:
+                plt.savefig('flap.png')
             #plt.show(block = True)
             plt.close()
 
@@ -726,47 +702,63 @@ def main():
                 p_torsion.append(teta)
 
             # Save data to file
-            np.save("i_torsion.npy",np.array(i_torsion))
-            np.save("p_torsion.npy",np.array(p_torsion))
+            if arg.name:
+                np.save(f"{arg.name}_i_torsion.npy",np.array(i_torsion))
+                np.save(f"{arg.name}_p_torsion.npy",np.array(p_torsion))
+            else:
+                np.save("i_torsion.npy",np.array(i_torsion))
+                np.save("p_torsion.npy",np.array(p_torsion))
 
             # Time 
             t=np.linspace(0, len(i_torsion)-1, len(i_torsion))*0.5
 
             #  Plot I-torsion
             plt.plot(t,i_torsion)
-            plt.ylabel('Dihedral angle (deg)')
+            plt.ylabel(r"$\phi_I$ (degrees)")
             plt.xlabel('Time (fs)')
-            plt.title('I Dihedral angle')
-            plt.savefig('I_dihedral.png')
+            plt.title('I-torsion')
+            if arg.name:
+                plt.savefig(f"{arg.name}_I_torsion.png")
+            else:
+                plt.savefig('I_dihedral.png')
             plt.close()
 
             #  Plot P-torsion
             plt.plot(t,p_torsion)
-            plt.ylabel('Dihedral angle (deg)')
+            plt.ylabel(r"$\phi_P$ (degrees)")
             plt.xlabel('Time (fs)')
-            plt.title('P Dihedral angle')
-            plt.savefig('P_dihedral.png')
+            plt.title('P-torsion')
+            if arg.name:
+                plt.savefig(f"{arg.name}_P_torsion.png")
+            else:
+                plt.savefig('P_torsion.png')
             plt.close()
 
             #  Plot I- and P-torsion together
             plt.plot(t,i_torsion, label="I-torsion")
             plt.plot(t,p_torsion, label="P-torsion")
-            plt.ylabel('Dihedral angle (deg)')
+            plt.ylabel('Torsion (degrees)')
             plt.xlabel('Time (fs)')
-            plt.title('P- and I- Dihedral angle')
+            plt.title('IP torsion')
             plt.legend()
-            plt.savefig('P-I_dihedral.png')
+            if arg.name:
+                plt.savefig(f"{arg.name}_IP_torsion.png")
+            else:
+                plt.savefig('IP_torsion.png')
             plt.close()
 
             alphas=np.linspace(1, 1, len(i_torsion))
             size=np.linspace(50, 50, len(i_torsion))
             plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
-            plt.ylabel('P-torsion')
-            plt.xlabel('I-torsion')
-            plt.title('P-I-Torsion')
+            plt.ylabel(r"$\phi_P$ (degrees)")
+            plt.xlabel(r"$\phi_I$ (degrees)")
+            plt.title('IP Torsion')
             cbar=plt.colorbar(values=t)
             cbar.set_label('Time (fs)')
-            plt.savefig('P-I_dihedral-2D.png')
+            if arg.name:
+                plt.savefig(f"{arg.name}_IP_torsion_2D.png")
+            else:
+                plt.savefig('IP_torsion_2D.png')
             plt.close()
 
             # Save last frame of trajectory
@@ -3161,7 +3153,10 @@ def main():
         #u=mda.Universe('sphere.prmtop', dcd)
         #u=mda.Universe(prmtop, dcd)
 
-        connections=read_table("index_dist_final.dat")
+        if arg.file:
+            connections=read_table(arg.file)
+        else:
+            connections=read_table("index_dist_final.dat")
 
         # TF-Dronpa2
         pring=u.atoms[[948,949,953,957,955,951]]
@@ -3191,9 +3186,6 @@ def main():
         phe170_triple=[6,15,7]
         phe170_dihedral=[]
 
-        # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
-        his_gyc_thr=[]
-
         # Radian to degrees
         r2d=57.2958
         p_torsion=[]
@@ -3208,16 +3200,29 @@ def main():
 
         # FOR MINIMUM DISTANCE
         gyc61=u.select_atoms("resid 61")
-        glu211=u.select_atoms("resid 211")
-        glu144=u.select_atoms("resid 144")
+        glu208=u.select_atoms("resid 208")
+        glu141=u.select_atoms("resid 141")
+        ile192=u.select_atoms("resid 192")
+        val154=u.select_atoms("resid 154")
 
-        phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
-        glu211_out=open('GYC61_GLU211_min_dist.dat', 'w')
-        glu144_out=open('GYC61_GLU144_min_dist.dat', 'w')
+        if arg.name:
+            phe170_out=open(f'{arg.name}_GYC61_PHE170_min_dist.dat', 'w')
+            glu208_out=open(f'{arg.name}_GYC61_GLU208_min_dist.dat', 'w')
+            glu141_out=open(f'{arg.name}_GYC61_GLU141_min_dist.dat', 'w')
+            ile192_out=open(f'{arg.name}_GYC61_ILE192_min_dist.dat', 'w')
+            val154_out=open(f'{arg.name}_GYC61_VAL154_min_dist.dat', 'w')
+        else:
+            phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
+            glu208_out=open('GYC61_GLU208_min_dist.dat', 'w')
+            glu141_out=open('GYC61_GLU141_min_dist.dat', 'w')
+            ile192_out=open('GYC61_ILE192_min_dist.dat', 'w')
+            val154_out=open('GYC61_VAL154_min_dist.dat', 'w')
 
         phe170_dist=[]
-        glu211_dist=[]
-        glu144_dist=[]
+        glu208_dist=[]
+        glu141_dist=[]
+        ile192_dist=[]
+        val154_dist=[]
 
         all_distances=np.zeros([len(connections), len(u.trajectory)])
         
@@ -3276,10 +3281,6 @@ def main():
             # PHE170 ring rotation
             theta=gp.compute_torsion5(phe170.positions,phe170_pair,phe170_triple)
             phe170_dihedral.append(theta)
-
-            # ANGLE BETWEEN HIS190_COM GYC_PRING_COM THR58_CG2
-            theta = three_points_angle(his190_com, pring_com, thr58_chg2.positions[0])
-            his_gyc_thr.append(theta)
         
             # MINIMUM DISTANCE BETWEEN GYC AND PHE/GLU
             d=mda.analysis.distances.distance_array(gyc61,phe170)
@@ -3288,26 +3289,49 @@ def main():
             phe170_dist.append(min_dist)
             phe170_out.write('GYC61-{:s} PHE170-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, phe170[index[0][1]].name, min_dist))
 
-            d=mda.analysis.distances.distance_array(gyc61,glu211)
+            d=mda.analysis.distances.distance_array(gyc61,glu208)
             min_dist=np.min(d)
             index=np.argwhere(d == min_dist)
-            glu211_dist.append(min_dist)
-            glu211_out.write('GYC61-{:s} GLU211-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu211[index[0][1]].name, min_dist))
+            glu208_dist.append(min_dist)
+            glu208_out.write('GYC61-{:s} GLU211-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu208[index[0][1]].name, min_dist))
 
-            d=mda.analysis.distances.distance_array(gyc61,glu144)
+            d=mda.analysis.distances.distance_array(gyc61,glu141)
             min_dist=np.min(d)
             index=np.argwhere(d == min_dist)
-            glu144_dist.append(min_dist)
-            glu144_out.write('GYC61-{:s} GLU144-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu144[index[0][1]].name, min_dist))
+            glu141_dist.append(min_dist)
+            glu141_out.write('GYC61-{:s} GLU141-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, glu141[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,ile192)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            ile192_dist.append(min_dist)
+            ile192_out.write('GYC61-{:s} ILE192-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, ile192[index[0][1]].name, min_dist))
+
+            d=mda.analysis.distances.distance_array(gyc61,val154)
+            min_dist=np.min(d)
+            index=np.argwhere(d == min_dist)
+            val154_dist.append(min_dist)
+            val154_out.write('GYC61-{:s} VAL154-{:s}: {:>2.2f} \n'.format(gyc61[index[0][0]].name, val154[index[0][1]].name, min_dist))
 
 
         phe170_out.close()
-        glu211_out.close()
-        glu144_out.close()
+        glu208_out.close()
+        glu141_out.close()
+        ile192_out.close()
+        val154_out.close()
 
-        np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
-        np.save('GYC61_GLU211_min_dist.npy', glu211_dist)
-        np.save('GYC61_GLU144_min_dist.npy', glu144_dist)
+        if arg.name:
+            np.save(f'{arg.name}_GYC61_PHE170_min_dist.npy', phe170_dist)
+            np.save(f'{arg.name}_GYC61_GLU211_min_dist.npy', glu208_dist)
+            np.save(f'{arg.name}_GYC61_GLU144_min_dist.npy', glu141_dist)
+            np.save(f'{arg.name}_GYC61_ILE192_min_dist.npy', ile192_dist)
+            np.save(f'{arg.name}_GYC61_VAL154_min_dist.npy', val154_dist)
+        else:
+            np.save('GYC61_PHE170_min_dist.npy', phe170_dist)
+            np.save('GYC61_GLU211_min_dist.npy', glu208_dist)
+            np.save('GYC61_GLU144_min_dist.npy', glu141_dist)
+            np.save('GYC61_ILE192_min_dist.npy', ile192_dist)
+            np.save('GYC61_VAL154_min_dist.npy', val154_dist)
 
         if arg.mmd:
             # MD ANALYSIS
@@ -3315,10 +3339,12 @@ def main():
         else:            
             T=np.linspace(0,len(u.trajectory)/2,len(u.trajectory))
         
-        out = open("distances_summary.dat", 'w')
+        if arg.name:
+            out = open(f"{arg.name}_distances_summary.dat", 'w')
+        else:
+            out = open("distances_summary.dat", 'w')
         out.write("# Connection                  min (A) max (A)  average (A) deviation\n")
         
-
         # PLOT INDIVIDUAL CONTRIBUTIONS
         for i in range(len(connections)):   
             fig, ax = plt.subplots(2,1)
@@ -3424,7 +3450,10 @@ def main():
                 if arg.name:
                     plt.savefig(f'{arg.name}_{connections[i][0]}_RING.png', dpi=300)
                 else:
-                    plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
+                    if arg.name:
+                        plt.savefig(f'{arg.name}_{connections[i][0]}_RING.png', dpi=300)
+                    else:
+                        plt.savefig(f'{connections[i][0]}_RING.png', dpi=300)
                 plt.close()
         out.close()
         
@@ -3478,15 +3507,18 @@ def main():
         ax.set_title(f'Distance GYC61-PHE170', fontsize=15)
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
-        plt.savefig(f'GYC61_PHE170_min_dist.png', dpi=300)
+        if arg.name:
+            plt.savefig(f'{arg.name}_GYC61_PHE170_min_dist.png', dpi=300)
+        else:
+            plt.savefig('GYC61_PHE170_min_dist.png', dpi=300)
         plt.close()
 
         # PLOT GYC61-GLU211 DISTANCE
         fig, ax = plt.subplots()
         fig.set_figheight(5)
         fig.set_figwidth(10)
-        ax.plot(T, glu211_dist, label='GYC61-GLU211')
-        avrg=np.mean(glu211_dist)
+        ax.plot(T, glu208_dist, label='GYC61-GLU208')
+        avrg=np.mean(glu208_dist)
         ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
         ax.set_ylabel(r'Distance ($\AA$)')
         if arg.mmd:
@@ -3494,18 +3526,21 @@ def main():
                 ax.set_xlabel('Time (ns)')
         else:
                 ax.set_xlabel('Time (fs)')
-        ax.set_title(f'Distance GYC61-GLU211', fontsize=15)
+        ax.set_title(f'Distance GYC61-GLU208', fontsize=15)
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
-        plt.savefig(f'GYC61_GLU211_min_dist.png', dpi=300)
+        if arg.name:
+            plt.savefig(f'{arg.name}_GYC61_GLU208_min_dist.png', dpi=300)
+        else:
+            plt.savefig('GYC61_GLU208_min_dist.png', dpi=300)
         plt.close()
 
         # PLOT GYC61-GLU144 DISTANCE
         fig, ax = plt.subplots()
         fig.set_figheight(5)
         fig.set_figwidth(10)
-        ax.plot(T, glu144_dist, label='GYC61-GLU144')
-        avrg=np.mean(glu144_dist)
+        ax.plot(T, glu141_dist, label='GYC61-GLU141')
+        avrg=np.mean(glu141_dist)
         ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
         ax.set_ylabel(r'Distance ($\AA$)')
         if arg.mmd:
@@ -3513,10 +3548,57 @@ def main():
                 ax.set_xlabel('Time (ns)')
         else:
                 ax.set_xlabel('Time (fs)')
-        ax.set_title(f'Distance GYC61-GLU144', fontsize=15)
+        ax.set_title(f'Distance GYC61-GLU141', fontsize=15)
         ax.legend(loc='upper right', framealpha=0.5)
         ax.set_xlim(0,T[-1])
-        plt.savefig(f'GYC61_GLU144_min_dist.png', dpi=300)
+        if arg.name:
+            plt.savefig(f'{arg.name}_GYC61_GLU141_min_dist.png', dpi=300)
+        else:
+            plt.savefig('GYC61_GLU141_min_dist.png', dpi=300)
+        plt.close()
+
+        # PLOT GYC61-ILE192 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, ile192_dist, label='GYC61-ILE192')
+        avrg=np.mean(ile192_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+            ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-ILE192', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        if arg.name:
+            plt.savefig(f'{arg.name}_GYC61_ILE192_min_dist.png', dpi=300)
+        else:
+            plt.savefig(f'GYC61_ILE192_min_dist.png', dpi=300)
+        plt.close()
+
+        # PLOT GYC61-VAL154 DISTANCE
+        fig, ax = plt.subplots()
+        fig.set_figheight(5)
+        fig.set_figwidth(10)
+        ax.plot(T, val154_dist, label='GYC61-VAL154')
+        avrg=np.mean(val154_dist)
+        ax.plot([0, T[-1]], [avrg, avrg], ls="-", lw="0.8", c="red", label="mean={:>2.1f}".format(avrg))
+        ax.set_ylabel(r'Distance ($\AA$)')
+        if arg.mmd:
+            # MD ANALYSIS
+                ax.set_xlabel('Time (ns)')
+        else:
+            ax.set_xlabel('Time (fs)')
+        ax.set_title(f'Distance GYC61-VAL154', fontsize=15)
+        ax.legend(loc='upper right', framealpha=0.5)
+        ax.set_xlim(0,T[-1])
+        if arg.name:
+            plt.savefig(f'{arg.name}_GYC61_VAL154_min_dist.png', dpi=300)
+        else:
+            plt.savefig(f'GYC61_VAL154_min_dist.png', dpi=300)
         plt.close()
 
 
@@ -3845,14 +3927,22 @@ def main():
         """
 
     if arg.distrib:
-        from matplotlib.ticker import MultipleLocator
+        import matplotlib.ticker as plticker
         from matplotlib import pyplot as plt
         import numpy as np
         import seaborn as sns
         import pandas as pd
         import glob
 
+        """
+        data=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
+              ['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
+              ['GLU','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy'],
+              ['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
+              ['ALL','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy', 'SER139-HG_GYC61-OK.npy','PHE170_HZ-GYC_Pring_COM.npy','THR58_CG2-GYC_Pring_COM.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','HIS190_COM-GYC_Pring_COM.npy']]
 
+        """
+        
         data=[['ARG','ARG63_HH12-GYC_OA.npy','ARG63_HH22-GYC_OA.npy','ARG88_HH12-GYC_OA.npy','ARG88_HH12-THR58_O.npy','ARG88_HH22-GYC_OA.npy'],
               #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
               ['HIS','GLU141_OE2-HIS190_HE2.npy','GLU208_OE1-HIS190_HD1.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy'],
@@ -3864,43 +3954,92 @@ def main():
                'ARG88_HH12-GYC_OA.npy',
                'ARG88_HH12-THR58_O.npy',
                'ARG88_HH22-GYC_OA.npy', 
-               'ILE192_CD1-GYC_CG.npy',
-               'ILE192_CG2-GYC_CI.npy',
-               'ILE192_CB-GYC_CI.npy',
+               #'ILE192_CD1-GYC_CG.npy',
+               #'ILE192_CG2-GYC_CI.npy',
+               #'ILE192_CB-GYC_CI.npy',
                'THR58_CG2-GYC_Pring_COM.npy',
                'HIS190_COM-GYC_Pring_COM.npy', 
                'HIS190_COM-THR58_CG2.npy',
+               'GYC61_VAL154_min_dist.npy',
                'GYC61_ILE192_min_dist.npy',
                'GYC61_PHE170_min_dist.npy',
                'GYC61_GLU211_min_dist.npy', 
-               'GYC61_GLU144_min_dist.npy']]
-
-        labels=[['ARG',r'R66-H$_1$/GYC-O$_I$',r'R66-H$_2$/GYC-O$_I',r'R91_H$_1$/GYC-O$_I',r'R91_H$_1$-THR58_O',r'R91-H$_2$/GYC-O$_I'],
+               'GYC61_GLU144_min_dist.npy']
+               ]
+        
+        if arg.name:
+            data = [[item[0], [arg.name + '_' + file if file.endswith('.npy') else file for file in item[1:]]] for item in data]
+        
+        labels=[['ARG',r'R66-H$_1$/GYC-O$_I$',r'R66-H$_2$/GYC-O$_I$',r'R91_H$_1$/GYC-O$_I$',r'R91_H$_1$-THR58-O',r'R91-H$_2$/GYC-O$_I$'],
               #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
-                ['HIS',r'E144-O/H193-H$_2$',r'E211-O/H193-H$_1$', r'E211/GYC61 m.d.', r'E144/GYC61 m.d.', r'H193-Ring/GYC-P$_{ring}$', r'H193-Ring/T59_C$_T$'],
+                ['HIS',r'E144-O/H193-H$_2$',r'E211-O/H193-H$_1$', r'E211/GYC61 m.d.', r'E144/GYC61 m.d.', r'H193-Ring/GYC-P$_{ring}$', r'H193-Ring/T59-C$_T$'],
               #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
-              ['ALL', r'R66-H$_1$/GYC-O$_I$',r'R66-H$_2$/GYC-O$_I',r'R91_H$_1$/GYC-O$_I',r'R91_H$_1$-THR58_O',r'R91-H$_2$/GYC-O$_I',
-                r'S142-H/GYC61-O$_P$.npy', 
-                # STOP HERE
-                'GYC61_PHE170_min_dist.npy','ILE192_CB-GYC_CI.npy','ILE192_CG2-GYC_CI.npy','THR58_CG2-GYC_Pring_COM.npy','HIS190_COM-GYC_Pring_COM.npy', 'HIS190_COM-THR58_CG2.npy', 'GYC61_GLU211_min_dist.npy', 'GYC61_GLU144_min_dist.npy']]
-
-        for group in data:
+              ['ALL',
+               r'S142-H/GYC-O$_P$',
+                r'R66-H$_1$/GYC-O$_I$',
+                r'R66-H$_2$/GYC-O$_I$',
+                r'R91-H$_2$/GYC-O$_I$',
+                r'R91-H$_1$/GYC-O$_I$',
+                r'R91-H$_1$-THR59-O', 
+                #r'L195-C$_1$/GYC-C$_G$',
+                #r'L195-C$_2$/GYC-C$_I$',
+                #r'L195-C$_B$/GYC-C$_I$',
+                r'T59-C$_T$/GYC-P$_{ring}$', 
+                r'H193-ImH/GYC-P$_{ring}$', 
+                r'H193-ImH/T59-C$_T$',
+                r'V157/GYC m.d.',
+                r'I192/GYC m.d.',
+                r'F173/GYC m.d.',
+                r'E211/GYC m.d.',
+                r'E144/GYC m.d.']
+                ]
+        """
+        labels=[#['ARG','R66-H1/GYC-OI','R66-H2/GYC-OI','R91_H1/GYC-OI','R91_H1-THR58_O','R91-H2/GYC-OI'],
+                ['ARG','R66-H1_GYC-OI','R66-H2_GYC-OI','R91_H1_GYC-OI','R91_H1_THR58_O','R91-H2_GYC-OI'],
+              #['PROJ', 'PROJ_HIS190-COM_Pring-COM.npy','PROJ_PHE170-HZ_Pring-COM.npy','PROJ_THR58-CG2_COM_dist.npy','PROJ_THR58_Pring_vector.npy'],
+                ['HIS','E144-O/H193-H2','E211-O/H193-H1', 'E211/GYC61 m.d.', 'E144/GYC61 m.d.', 'H193-Ring/GYC-Pring', 'H193-Ring/T59-CT'],
+              #['PHE_ARG_TRP','PHE170_CD2-ARG88_CZ.npy','PHE170_CE1-ARG88_CZ.npy','TRP86_BENZ_COM-ARG88_CZ.npy'], 
+              ['ALL',
+                'S142-H/GYC61-OP',
+                'R66-H1/GYC-OI',
+                'R66-H2/GYC-OI',
+                'R91-H2/GYC-OI',
+                'R91_H1/GYC-OI',
+                'R91_H1-THR59_O', 
+                'L195-C1/GYC-CG',
+                'L195-C2/GYC-CI',
+                'L195-CB/GYC-CI',
+                'T59-CT/GYC-Pring', 
+                'H193-Ring/GYC-Pring', 
+                'H193-Ring/T59-CT'
+                'V157/GYC61 m.d.',
+                'I192/GYC61 m.d.',
+                'F173/GYC61 m.d.',
+                'E211/GYC61 m.d.',
+                'E144/GYC61 m.d.']
+                ]
+                """
+        
+        for (group, label) in zip(data, labels):
             distances={}
             vectors={}
-            for i, dist in enumerate(group):
+            for i, (dist, name) in enumerate(zip(group, label)):
                 if i == 0:
                     figname = dist
                 else:
                     if figname == 'PROJ':
                         if 'vector' in dist:
-                            name = dist.replace(".npy", "")
+                            #name = dist.replace(".npy", "")
                             vectors[name]=np.load(dist)
                         else:
-                            name = dist.replace(".npy", "")
+                            #name = dist.replace(".npy", "")
                             distances[name]=np.load(dist)
                     else:
-                        name = dist.replace(".npy", "")
+                        #name = dist.replace(".npy", "")
                         distances[name]=np.load(dist)
+                        
+                        #distances[name]=np.load(dist)
+        
 
             if figname == 'PROJ':
                 # BOXEN PLOT
@@ -3967,10 +4106,19 @@ def main():
                     ax.set_xlim(1.1,13)
                 else:
                     ax.set_xlim(1.1,5)
+                
+                loc = plticker.MultipleLocator(base=1.0) # this locator puts ticks at regular intervals
+                ax.xaxis.set_major_locator(loc)
+                ax.tick_params(axis='x', direction='in', top= True)
+                ax.tick_params(axis='y', direction='in', right= True, left= True)
                 plt.tight_layout()
                 #plt.show()
-                plt.savefig(f'{figname}_dist_distrib_boxen2.png', dpi=300)
-                plt.savefig(f'{figname}_dist_distrib_boxen2.svg', format="svg")
+                if arg.name:
+                    plt.savefig(f'{arg.name}_{figname}_dist_boxen.png', dpi=300)
+                    plt.savefig(f'{arg.name}_{figname}_dist_boxen.svg', format="svg")
+                else:
+                    plt.savefig(f'{figname}_dist_boxen.png', dpi=300)
+                    plt.savefig(f'{figname}_dist_boxen.svg', format="svg")
 
                 plt.close()
 
@@ -4030,11 +4178,18 @@ def main():
         ile192=u.select_atoms("resid 192")
         val154=u.select_atoms("resid 154")
 
-        phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
-        glu208_out=open('GYC61_GLU208_min_dist.dat', 'w')
-        glu141_out=open('GYC61_GLU141_min_dist.dat', 'w')
-        ile192_out=open('GYC61_ILE192_min_dist.dat', 'w')
-        val154_out=open('GYC61_VAL154_min_dist.dat', 'w')
+        if arg.name:
+            phe170_out=open(f'{arg.name}_GYC61_PHE170_min_dist.dat', 'w')
+            glu208_out=open(f'{arg.name}_GYC61_GLU208_min_dist.dat', 'w')
+            glu141_out=open(f'{arg.name}_GYC61_GLU141_min_dist.dat', 'w')
+            ile192_out=open(f'{arg.name}_GYC61_ILE192_min_dist.dat', 'w')
+            val154_out=open(f'{arg.name}_GYC61_VAL154_min_dist.dat', 'w')
+        else:
+            phe170_out=open('GYC61_PHE170_min_dist.dat', 'w')
+            glu208_out=open('GYC61_GLU208_min_dist.dat', 'w')
+            glu141_out=open('GYC61_GLU141_min_dist.dat', 'w')
+            ile192_out=open('GYC61_ILE192_min_dist.dat', 'w')
+            val154_out=open('GYC61_VAL154_min_dist.dat', 'w')
 
         phe170_dist=[]
         glu208_dist=[]
