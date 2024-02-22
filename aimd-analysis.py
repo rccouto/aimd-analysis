@@ -401,6 +401,7 @@ def main():
         import numpy as np
         import socket
         import matplotlib.pyplot as plt
+        import cmcrameri.cm as cmc
 
        
         # ON MACMINI    
