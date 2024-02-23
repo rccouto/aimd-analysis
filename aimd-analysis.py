@@ -392,6 +392,16 @@ def main():
         if arg.plot == "s0":
             plt.show()
         plt.close()
+
+        # PLOT RESULS AND SAVE FIGURE
+        plt.plot(step, E)
+        plt.ylabel('S0 energy (a.u.)')
+        plt.xlabel('Time (fs)')
+        plt.title('S0 energy')
+        plt.savefig('energy-gap.png')
+        if arg.plot == "s0":
+            plt.show()
+        plt.close()
         
 
     # ANALYZE THE TRAJECTORIES FROM TERACHEM
