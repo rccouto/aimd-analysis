@@ -53,7 +53,7 @@ def get_tc_md_results(file):
              words = i.split()
              e = float(words[2])
              E.append(e)
-             #print(s)
+             print(e)
 
         elif re.search(r"   1 ->  ", i) is not None and getEnergy == 1 :
              words = i.split()
