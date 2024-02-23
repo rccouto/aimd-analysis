@@ -30,7 +30,6 @@ def get_tc_md_results(file):
     dipole = re.compile(r'(\d+)\s+(\d+)\s+([+-]?\d+\.\d*(?:[Ee]-?\d+)?)\s+([+-]?\d+\.\d*(?:[Ee]-?\d+)?)')
 
     for i in open( file ).readlines():
-
         # Get the time step
         if re.search(r"Velocity Verlet integration time step:", i) is not None and ts == 0: 
             words = i.split()
@@ -39,7 +38,6 @@ def get_tc_md_results(file):
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
             s = int(words[4])
-
             if s == 1:
                 S.append(s*ts)
                 getEnergy=1
@@ -48,23 +46,21 @@ def get_tc_md_results(file):
                 getEnergy=1
             else:
                 getEnergy=0
-                
-        elif re.search(r"  singlet   ", i) is not None and getEnergy == 1 :
+        
+        elif re.search(r"  singlet      -", i) is not None and getEnergy == 1 :
              words = i.split()
              e = float(words[2])
              E.append(e)
-             print(e)
 
         elif re.search(r"   1 ->  ", i) is not None and getEnergy == 1 :
              words = i.split()
              d = float(words[7])
              D.append(d)
 
-        elif (re.search(r"Singlet state velocity transition dipole moments:", i) is not None or re.search(r"|  Root   Mult.      Ex. Wavelength (nm)", i) is not None) and getEnergy == 1:
+        elif re.search(r"Singlet state velocity transition dipole moments:", i) is not None and getEnergy == 1:
              getEnergy=0
 
     nroots=int(len(E)/len(S))
-    #print(nroots)
     E=np.array(E).reshape(-1,nroots)
     D=np.array(D).reshape(-1,2)
 
@@ -386,16 +382,6 @@ def main():
         plt.xlabel('Time (fs)')
         plt.title('S0 energy')
         plt.savefig('energy-s0.png')
-        if arg.plot == "s0":
-            plt.show()
-        plt.close()
-
-        # PLOT RESULS AND SAVE FIGURE
-        plt.plot(step, E)
-        plt.ylabel('S0 energy (a.u.)')
-        plt.xlabel('Time (fs)')
-        plt.title('S0 energy')
-        plt.savefig('energy-gap.png')
         if arg.plot == "s0":
             plt.show()
         plt.close()
