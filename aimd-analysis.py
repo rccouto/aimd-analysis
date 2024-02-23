@@ -35,7 +35,6 @@ def get_tc_md_results(file):
         if re.search(r"Velocity Verlet integration time step:", i) is not None and ts == 0: 
             words = i.split()
             ts = float(words[5])
-            #ts=1
            
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
@@ -44,13 +43,11 @@ def get_tc_md_results(file):
             if s == 1:
                 S.append(s*ts)
                 getEnergy=1
-                #print("if")
             elif S and s > S[-1]:
                 S.append(s*ts)
                 getEnergy=1
             else:
                 getEnergy=0
-                #print("else")
                 
         elif re.search(r"  singlet   ", i) is not None and getEnergy == 1 :
              words = i.split()
@@ -63,7 +60,7 @@ def get_tc_md_results(file):
              d = float(words[7])
              D.append(d)
 
-        elif re.search(r"Singlet state velocity transition dipole moments:", i) is not None and getEnergy == 1:
+        elif (re.search(r"Singlet state velocity transition dipole moments:", i) is not None or re.search(r"|  Root   Mult.      Ex. Wavelength (nm)", i) is not None) and getEnergy == 1:
              getEnergy=0
 
     nroots=int(len(E)/len(S))
