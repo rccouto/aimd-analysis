@@ -38,7 +38,7 @@ def get_tc_md_results(file):
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
             s = int(words[4])
-            if s == 1:
+            if s == 1 or s == 10000:
                 S.append(s*ts)
                 getEnergy=1
             elif S and s > S[-1]:
