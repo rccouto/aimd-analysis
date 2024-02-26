@@ -38,7 +38,7 @@ def get_tc_md_results(file):
         elif re.search(r"MD STEP", i) is not None and getEnergy == 0:
             words = i.split()
             s = int(words[4])
-            if s == 1 or s == 10000:
+            if s == 1:
                 S.append(s*ts)
                 getEnergy=1
             elif S and s > S[-1]:
@@ -447,6 +447,39 @@ def main():
             elif arg.dcdlist:
                 dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
                 traj=md.join(dcds, discard_overlapping_frames=True)
+            else:
+                traj = md.load_dcd(arg.dcd, top = topology)
+
+        # ON BERZELIUS
+        elif socket.gethostname() == "amaze":
+            sys.path.insert(1, '/data/users/rcc/codes/tcutil/code/geom_param')
+            import geom_param as gp
+            # LOAD TRAJECTORIE(S)
+            topology = md.load_prmtop(arg.top)
+            if arg.dcd2 and arg.dcd :
+                traj1 = md.load_dcd(arg.dcd, top = topology)
+                traj2 = md.load_dcd(arg.dcd2, top = topology)
+                traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+                del traj1, traj2
+            elif arg.dcdlist:
+                dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+                traj1 = md.load_dcd(dcds[0], top = topology)
+                traj2 = md.load_dcd(dcds[1], top = topology)
+                traj3 = md.load_dcd(dcds[2], top = topology)
+                traj4 = md.load_dcd(dcds[3], top = topology)
+                traj5 = md.load_dcd(dcds[4], top = topology)
+                traj6 = md.load_dcd(dcds[5], top = topology)
+                if len(dcds) == 7:
+                    traj7 = md.load_dcd(dcds[6], top = topology)
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6, traj7], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6, traj7
+                elif len(dcds) == 8:
+                    traj8 = md.load_dcd(dcds[7], top = topology)
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6, traj7, traj8], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6, traj7, traj8
+                else:
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6
             else:
                 traj = md.load_dcd(arg.dcd, top = topology)
 
