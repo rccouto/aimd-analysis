@@ -346,30 +346,35 @@ def main():
         plt.ylabel('Energy gap S1-S0 (eV)')
         plt.xlabel('Time (fs)')
         plt.title('Energy gap between S0 and S1')
-        #plt.ylim(-80,80)
-        plt.savefig('energy-gap-s0-s1.png')
-
-        E=[]
-        s0s1gap=(energy[:,1]-energy[:,0])*27.211385
-        len(s0s1gap)
-        for t in range(len(s0s1gap)):
-            if (t % 4) == 0:
-                E.append(s0s1gap[t])
-                E.append(step[t])
-        E=np.array(E).reshape(-1,2)
-        #print(len(E))
+        plt.ylim(0,3)
+        if arg.name:
+            plt.savefig(f"{arg.name}_Egap.png")
+        else:
+            plt.savefig('Egap.png')
 
         if arg.plot == "gap":
             plt.show()
         plt.close()
+
+        #E=[]
+        #s0s1gap=(energy[:,1]-energy[:,0])*27.211385
+        #for t in range(len(s0s1gap)):
+        #    if (t % 4) == 0:
+        #        E.append(s0s1gap[t])
+        #        E.append(step[t])
+        #E=np.array(E).reshape(-1,2)
+        #print(len(E))
+
 
         # PLOT RESULS AND SAVE FIGURE
         plt.plot(step, energy[:,1])
         plt.ylabel('S1 energy (a.u.)')
         plt.xlabel('Time (fs)')
         plt.title('S1 energy')
-        #plt.ylim(-80,80)
-        plt.savefig('energy-s1.png')
+        if arg.name:
+            plt.savefig(f"{arg.name}_energy-s1.png")
+        else:
+            plt.savefig('energy-s1.png')
         if arg.plot == "s1":
             plt.show()
         plt.close()
