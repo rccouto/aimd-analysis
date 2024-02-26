@@ -358,8 +358,6 @@ def main():
                 E.append(step[t])
         E=np.array(E).reshape(-1,2)
         #print(len(E))
-        np.save("s0s1gap.npy", E)
-
 
         if arg.plot == "gap":
             plt.show()
@@ -386,6 +384,12 @@ def main():
             plt.show()
         plt.close()
         
+        if arg.name:
+            np.save(f"{arg.name}_energy.npy", energy)
+            np.save(f"{arg.name}_dipole.npy", dipole)
+        else:
+            np.save("energy.npy", energy)
+            np.save("dipole.npy", dipole)
 
     # ANALYZE THE TRAJECTORIES FROM TERACHEM
     elif arg.analyze:
