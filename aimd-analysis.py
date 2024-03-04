@@ -804,7 +804,9 @@ def main():
             plt.scatter(i_torsion,p_torsion, c=t, cmap=cmc.hawaii, s=size, alpha=alphas, linewidth=0.1)
             plt.ylabel(r"$\phi_P$ (degrees)")
             plt.xlabel(r"$\phi_I$ (degrees)")
-            plt.title('IP Torsion')
+            plt.title(f'{arg.name} - IP Torsion')
+            plt.ylim(-100,20)
+            plt.xlim(-25,100)
             cbar=plt.colorbar(values=t)
             cbar.set_label('Time (fs)')
             if arg.name:
