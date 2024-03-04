@@ -430,6 +430,41 @@ def main():
                 traj2 = md.load_dcd(arg.dcd2, top = topology)
                 traj=md.join([traj1,traj2], discard_overlapping_frames=True)
                 del traj1, traj2
+            elif arg.dcdlist:
+                dcds = [ file.rstrip('\n') for file in open(arg.dcdlist, 'r').readlines() ]
+                traj1 = md.load_dcd(dcds[0], top = topology)
+                traj2 = md.load_dcd(dcds[1], top = topology)
+                if len(dcds) == 7:
+                    traj3 = md.load_dcd(dcds[2], top = topology)
+                    traj4 = md.load_dcd(dcds[3], top = topology)
+                    traj5 = md.load_dcd(dcds[4], top = topology)
+                    traj6 = md.load_dcd(dcds[5], top = topology)
+                    traj7 = md.load_dcd(dcds[6], top = topology)
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6, traj7], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6, traj7
+                elif len(dcds) == 8:
+                    traj3 = md.load_dcd(dcds[2], top = topology)
+                    traj4 = md.load_dcd(dcds[3], top = topology)
+                    traj5 = md.load_dcd(dcds[4], top = topology)
+                    traj6 = md.load_dcd(dcds[5], top = topology)
+                    traj7 = md.load_dcd(dcds[6], top = topology)
+                    traj8 = md.load_dcd(dcds[7], top = topology)
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6, traj7, traj8], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6, traj7, traj8
+                elif len(dcds) == 2:
+                    traj=md.join([traj1,traj2], discard_overlapping_frames=True)
+                    del traj1, traj2
+                elif len(dcds) == 3:
+                    traj3 = md.load_dcd(dcds[2], top = topology)
+                    traj=md.join([traj1,traj2,traj3], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3
+                elif len(dcds) == 6:
+                    traj3 = md.load_dcd(dcds[2], top = topology)
+                    traj4 = md.load_dcd(dcds[3], top = topology)
+                    traj5 = md.load_dcd(dcds[4], top = topology)
+                    traj6 = md.load_dcd(dcds[5], top = topology)
+                    traj=md.join([traj1,traj2,traj3,traj4,traj5,traj6], discard_overlapping_frames=True)
+                    del traj1, traj2, traj3, traj4, traj5, traj6
             else:
                 traj = md.load_dcd(arg.dcd, top = topology)
 
